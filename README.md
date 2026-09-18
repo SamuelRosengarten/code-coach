@@ -1,27 +1,40 @@
-# Code Coach (VS Code Extension)
+# Code Coach Design
 
-A VS Code extension that transforms coding errors into learning moments.
+**Design Reference:** https://claude.ai/design/p/7aec18e6-ff59-4189-a463-b0c7f128f285?file=Code+Coach.dc.html&via=share
 
-## Features
+## Overview
+The Code Coach design establishes the visual language and user interface for the VS Code extension's coaching system.
 
-- **Live Coaching** – Gentle hints at errors instead of raw stack traces
-- **Smart Muting** – Stops nagging after repeated errors (configurable)
-- **Progress Dashboard** – Visualize your improvement over time
-- **Session Summaries** – Friendly end-of-session coaching touchpoints
-- **Progress Reports** – Export your learning journey
+## Key Components
+- **Error Hints**: Gentle, contextual hints displayed near errors in the editor
+- **Dashboard/Sidebar Panel**: Visualization of mistakes over time with coaching insights
+- **Session Summary**: End-of-session coaching touchpoint showing progress
+- **Progress Reports**: Visual tracking of improvement across weeks
 
-## Supported Languages
+## Design Sections
+### Color Palette
+*[Add color specifications here]*
 
-C++, Java, Kotlin, Flutter/Dart
+### Typography
+*[Add font and text styling here]*
 
-## Getting Started
+### UI Components
+*[List main UI components and their styling]*
 
-[Installation steps]
+### Interaction Patterns
+*[Document key interactions and animations]*
 
-## Configuration
+## Coaching Elements
+- Mistake type visualizations
+- File/line heatmap for error concentration
+- Weekly improvement graphs
+- Friendly end-of-session summaries
 
-[Settings for repeat thresholds, time windows, etc.]
+## Export & Sharing
+- One-page exportable report format for sharing with tutors/mentors
+- Dashboard view for ongoing tracking
 
-## Contributing
+---
 
-[How to contribute]
+**Last updated:** September 18, 2026  
+**Related:** Visual Code Extension Project
