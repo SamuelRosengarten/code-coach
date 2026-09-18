@@ -1,0 +1,44 @@
+# Security Policy
+
+## Reporting a Vulnerability
+
+If you discover a security vulnerability in Code Coach, please **do not** create a public GitHub issue. Instead, please report it responsibly.
+
+### How to Report
+
+1. **Email:** samrosengarten2@icloud.com
+   - Subject: `[SECURITY] Code Coach Vulnerability Report`
+   - Include as much detail as possible (steps to reproduce, impact, affected versions)
+
+2. **GitHub Security Advisory:** Use the "Report a vulnerability" feature in the Security tab of this repository
+
+### What to Expect
+
+- **Acknowledgment:** We'll confirm receipt within 48 hours
+- **Timeline:** We aim to investigate and respond within 7 days
+- **Fix:** Critical vulnerabilities will be addressed and released as soon as possible
+- **Credit:** We're happy to credit you for the report if you'd like
+
+## Supported Versions
+
+| Version | Status |
+|---------|--------|
+| 1.x     | Supported |
+| < 1.0   | Pre-release—use at own risk |
+
+We recommend always using the latest version to get security updates and improvements.
+
+## Security Considerations
+
+Code Coach runs locally in your VS Code environment and:
+- Does **not** send your code to external servers
+- Does **not** store personal data
+- Only logs error patterns locally on your machine
+
+## Questions?
+
+For general security questions or best practices, feel free to open a discussion or reach out.
+
+---
+
+**Thank you for helping keep Code Coach secure!**
