@@ -19,7 +19,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile",
-    "test": "node --test out/test/**/*.test.js",
+    "test": "node --test 'out/test/**/*.test.js'",
     "lint": "tsc --noEmit -p ./"
   },
   "devDependencies": {
