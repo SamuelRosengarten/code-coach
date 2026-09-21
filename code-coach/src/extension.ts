@@ -5,6 +5,7 @@ import { registerHintDecorations, clearHintsForType } from './hintDecorations';
 import { muteType, unmuteType, listMutedTypes } from './muteStore';
 import { formatLanguageLabel } from './stats';
 import { StatsViewProvider } from './statsViewProvider';
+import { setApiKey, clearApiKey } from './claudeHintClient';
 
 let cachedStoragePath: string | undefined;
 
@@ -22,6 +23,8 @@ export function activate(context: vscode.ExtensionContext){
 			clearHintsForType(language, errorType);
 		}),
 		vscode.commands.registerCommand('codeCoach.manageMutedHints', () => manageMutedHints()),
+		vscode.commands.registerCommand('codeCoach.setApiKey', () => setApiKey(context)),
+		vscode.commands.registerCommand('codeCoach.clearApiKey', () => clearApiKey(context)),
 		statsViewProvider
 	);
 

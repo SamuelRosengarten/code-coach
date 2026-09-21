@@ -28,6 +28,7 @@ export interface DiagnosticSelection {
 	line: number;
 	column: number;
 	identity: string;
+	message: string;
 }
 
 export function selectNewDiagnostics(
@@ -48,7 +49,7 @@ export function selectNewDiagnostics(
 		const identity = `${errorType}:${line}:${column}`;
 
 		currentIdentities.add(identity);
-		selections.push({ errorType, line, column, identity });
+		selections.push({ errorType, line, column, identity, message: diagnostic.message });
 	}
 
 	// Keep previously-logged identities only if they're still present —

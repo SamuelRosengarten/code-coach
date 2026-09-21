@@ -44,8 +44,44 @@
         "command": "codeCoach.manageMutedHints",
         "title": "Manage Muted Hints",
         "category": "Code Coach"
+      },
+      {
+        "command": "codeCoach.setApiKey",
+        "title": "Set Claude API Key",
+        "category": "Code Coach"
+      },
+      {
+        "command": "codeCoach.clearApiKey",
+        "title": "Clear Claude API Key",
+        "category": "Code Coach"
       }
     ],
+    "configuration": {
+      "title": "Code Coach",
+      "properties": {
+        "codeCoach.hintProvider": {
+          "type": "string",
+          "enum": ["off", "claude", "local"],
+          "enumDescriptions": [
+            "Use only the built-in rule-based hints. No setup, no cost.",
+            "Reword hints with the Claude API. Requires your own Anthropic API key (run \"Code Coach: Set Claude API Key\").",
+            "Reword hints with a locally-running model via Ollama. Requires Ollama installed and running."
+          ],
+          "default": "off",
+          "description": "How Code Coach generates the hint text shown next to errors."
+        },
+        "codeCoach.localHintEndpoint": {
+          "type": "string",
+          "default": "http://localhost:11434/api/generate",
+          "description": "Endpoint for the local model server, used when codeCoach.hintProvider is \"local\"."
+        },
+        "codeCoach.localHintModel": {
+          "type": "string",
+          "default": "llama3.2",
+          "description": "Model name to request from the local model server, used when codeCoach.hintProvider is \"local\"."
+        }
+      }
+    },
     "menus": {
       "view/title": [
         {
@@ -65,17 +101,20 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.138.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "24.x",
-    "typescript-eslint": "^8.61.1",
+    "@types/vscode": "^1.138.0",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.0.0",
     "eslint": "^10.5.0",
     "typescript": "^6.0.3",
-    "@vscode/test-cli": "^0.0.15",
-    "@vscode/test-electron": "^3.0.0"
+    "typescript-eslint": "^8.61.1"
   },
   "overrides": {
     "diff": "^8.0.4",
     "serialize-javascript": "^7.0.6"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.127.0"
   }
 }

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { appendErrorEvent } from './errorLogger';
 import { ErrorEvent } from './types';
 import { selectNewDiagnostics } from './diagnosticsFilter';
-import { getHint } from './hints';
+import { getCoachingHint } from './rewordHint';
 import { showHint, clearHint } from './hintDecorations';
 import { isMuted } from './muteStore';
 
@@ -22,7 +22,7 @@ export function registerDiagnosticsListener(context: vscode.ExtensionContext): v
 
 			const timer = setTimeout(() => {
 				pendingTimers.delete(uriKey);
-				processStableDiagnostics(uri);
+				void processStableDiagnostics(uri, context);
 			}, DEBOUNCE_MS);
 
 			pendingTimers.set(uriKey, timer);
@@ -32,7 +32,7 @@ export function registerDiagnosticsListener(context: vscode.ExtensionContext): v
 	context.subscriptions.push(disposable);
 }
 
-function processStableDiagnostics(uri: vscode.Uri): void {
+async function processStableDiagnostics(uri: vscode.Uri, context: vscode.ExtensionContext): Promise<void> {
 	const uriKey = uri.toString();
 	const errorDiagnostics = vscode.languages.getDiagnostics(uri).filter(
 		(d) => d.severity === vscode.DiagnosticSeverity.Error
@@ -63,6 +63,8 @@ function processStableDiagnostics(uri: vscode.Uri): void {
 		clearHint(uri, line);
 	}
 
+	const hintTasks: Promise<void>[] = [];
+
 	for (const selection of toLog) {
 		const muted = isMuted(language, selection.errorType);
 		const errorEvent: ErrorEvent = {
@@ -76,9 +78,14 @@ function processStableDiagnostics(uri: vscode.Uri): void {
 
 		appendErrorEvent(errorEvent);
 		if (!muted) {
-			showHint(uri, selection.line, getHint(selection.errorType, language), selection.errorType, language);
+			hintTasks.push(
+				getCoachingHint(context, selection.errorType, language, selection.message).then((hint) => {
+					showHint(uri, selection.line, hint, selection.errorType, language);
+				})
+			);
 		}
 	}
 
 	loggedDiagnostics.set(uriKey, updatedLogged);
+	await Promise.all(hintTasks);
 }
