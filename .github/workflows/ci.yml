@@ -23,3 +23,21 @@ jobs:
 
       - name: Unit tests
         run: npm test
+
+  integration-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # Runs the extension inside a real VS Code instance under a virtual
+      # display, so the hover, activation and log-writing behavior is
+      # exercised end to end rather than only through unit tests.
+      - name: Integration tests (VS Code Extension Host)
+        run: xvfb-run -a npm run test:integration

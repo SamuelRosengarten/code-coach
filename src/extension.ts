@@ -6,13 +6,24 @@ import { processDiagnostics } from './diagnosticsHandler';
 import { buildHoverMessage } from './hoverProvider';
 import { TARGET_LANGUAGE_ID } from './hints';
 
-export function activate(context: vscode.ExtensionContext): void {
+/** Public surface of the extension, used by the integration tests. */
+export interface CodeCoachApi {
+  storageFolder: string;
+  logFilePath: string;
+}
+
+export function activate(context: vscode.ExtensionContext): CodeCoachApi {
   // Resolved once at activation (#19, #24) rather than on every diagnostic.
   const storageFolder = getStorageFolder(context);
   const logFilePath = getLogFilePath(storageFolder);
   console.log(`[Code Coach] Logging error events to ${logFilePath}`);
 
-  const muteTracker = new MuteTracker(context.workspaceState);
+  const config = vscode.workspace.getConfiguration('codeCoach');
+  const muteTracker = new MuteTracker(
+    context.workspaceState,
+    config.get<number>('muteWindowMinutes', 10) * 60 * 1000,
+    config.get<number>('muteThreshold', 3)
+  );
 
   const diagnosticsSubscription = vscode.languages.onDidChangeDiagnostics((event) => {
     for (const uri of event.uris) {
@@ -47,6 +58,8 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(diagnosticsSubscription, hoverSubscription);
+
+  return { storageFolder, logFilePath };
 }
 
 export function deactivate(): void {}
