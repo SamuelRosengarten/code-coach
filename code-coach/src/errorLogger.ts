@@ -2,8 +2,7 @@ import path from "path";
 import * as fs from "fs";
 import { getStorageDir } from './extension';
 import { ErrorEvent } from './types';
-
-const LOG_FILE_NAME = 'errors.jsonl';
+export const LOG_FILE_NAME = 'errors.jsonl';
 
 export function appendErrorEvent(event: ErrorEvent):void {
     try {

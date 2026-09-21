@@ -37,16 +37,16 @@ suite('Diagnostics Filter Test Suite', () => {
 	});
 
 	test('filters out known syntax-noise codes entirely', () => {
-		const { toLog, currentlyPresent } = selectNewDiagnostics(
+		const { toLog, updatedLogged } = selectNewDiagnostics(
 			[makeDiagnostic(2, 4, 'expected_token')],
 			new Set()
 		);
 		assert.strictEqual(toLog.length, 0);
-		assert.strictEqual(currentlyPresent.size, 0);
+		assert.strictEqual(updatedLogged.size, 0);
 	});
 
 	test('logs a diagnostic not seen before', () => {
-		const { toLog, currentlyPresent } = selectNewDiagnostics(
+		const { toLog, updatedLogged } = selectNewDiagnostics(
 			[makeDiagnostic(9, 12, 'invalid_assignment')],
 			new Set()
 		);
@@ -54,21 +54,21 @@ suite('Diagnostics Filter Test Suite', () => {
 		assert.strictEqual(toLog[0].errorType, 'invalid_assignment');
 		assert.strictEqual(toLog[0].line, 10);
 		assert.strictEqual(toLog[0].column, 12);
-		assert.strictEqual(currentlyPresent.size, 1);
+		assert.strictEqual(updatedLogged.size, 1);
 	});
 
 	test('does not re-log a diagnostic already logged and still present', () => {
 		const diagnostic = makeDiagnostic(9, 12, 'invalid_assignment');
 		const first = selectNewDiagnostics([diagnostic], new Set());
-		const second = selectNewDiagnostics([diagnostic], first.currentlyPresent);
+		const second = selectNewDiagnostics([diagnostic], first.updatedLogged);
 
 		assert.strictEqual(second.toLog.length, 0);
-		assert.strictEqual(second.currentlyPresent.size, 1);
+		assert.strictEqual(second.updatedLogged.size, 1);
 	});
 
 	test('treats the same errorType/line at a different column as a new diagnostic', () => {
 		const first = selectNewDiagnostics([makeDiagnostic(9, 5, 'undefined_identifier')], new Set());
-		const second = selectNewDiagnostics([makeDiagnostic(9, 20, 'undefined_identifier')], first.currentlyPresent);
+		const second = selectNewDiagnostics([makeDiagnostic(9, 20, 'undefined_identifier')], first.updatedLogged);
 
 		assert.strictEqual(second.toLog.length, 1);
 	});
@@ -76,9 +76,29 @@ suite('Diagnostics Filter Test Suite', () => {
 	test('re-logs a diagnostic that disappeared and came back', () => {
 		const diagnostic = makeDiagnostic(9, 12, 'invalid_assignment');
 		const firstPass = selectNewDiagnostics([diagnostic], new Set());
-		const secondPass = selectNewDiagnostics([], firstPass.currentlyPresent);
-		const thirdPass = selectNewDiagnostics([diagnostic], secondPass.currentlyPresent);
+		const secondPass = selectNewDiagnostics([], firstPass.updatedLogged);
+		const thirdPass = selectNewDiagnostics([diagnostic], secondPass.updatedLogged);
 
 		assert.strictEqual(thirdPass.toLog.length, 1);
+	});
+
+	test('defers a new diagnostic on the line currently being edited', () => {
+		const diagnostic = makeDiagnostic(9, 12, 'invalid_assignment');
+		const { toLog, updatedLogged } = selectNewDiagnostics(
+			[diagnostic],
+			new Set(),
+			(selection) => selection.line === 10 // pretend the cursor is on line 10
+		);
+
+		assert.strictEqual(toLog.length, 0);
+		assert.strictEqual(updatedLogged.size, 0);
+	});
+
+	test('logs a deferred diagnostic once the cursor moves off that line', () => {
+		const diagnostic = makeDiagnostic(9, 12, 'invalid_assignment');
+		const deferred = selectNewDiagnostics([diagnostic], new Set(), (selection) => selection.line === 10);
+		const afterMove = selectNewDiagnostics([diagnostic], deferred.updatedLogged);
+
+		assert.strictEqual(afterMove.toLog.length, 1);
 	});
 });

@@ -11,14 +11,17 @@ export function registerDiagnosticsListener(context: vscode.ExtensionContext): v
 	const disposable = vscode.languages.onDidChangeDiagnostics((event) => {
 		for (const uri of event.uris) {
 			const uriKey = uri.toString();
+
 			const existingTimer = pendingTimers.get(uriKey);
 			if (existingTimer) {
 				clearTimeout(existingTimer);
 			}
+
 			const timer = setTimeout(() => {
 				pendingTimers.delete(uriKey);
 				processStableDiagnostics(uri);
 			}, DEBOUNCE_MS);
+
 			pendingTimers.set(uriKey, timer);
 		}
 	});
@@ -33,9 +36,21 @@ function processStableDiagnostics(uri: vscode.Uri): void {
 	);
 
 	const previouslyLogged = loggedDiagnostics.get(uriKey) ?? new Set<string>();
-	const { toLog, currentlyPresent } = selectNewDiagnostics(errorDiagnostics, previouslyLogged);
 
-	const document = vscode.workspace.textDocuments.find((doc) => doc.uri.toString() === uriKey);
+	const activeEditor = vscode.window.activeTextEditor;
+	const activeLine = activeEditor?.document.uri.toString() === uriKey
+		? activeEditor.selection.active.line + 1
+		: undefined;
+
+	const { toLog, updatedLogged } = selectNewDiagnostics(
+		errorDiagnostics,
+		previouslyLogged,
+		(selection) => selection.line === activeLine
+	);
+
+	const document = vscode.workspace.textDocuments.find(
+		(doc) => doc.uri.toString() === uriKey
+	);
 
 	for (const selection of toLog) {
 		const errorEvent: ErrorEvent = {
@@ -46,9 +61,10 @@ function processStableDiagnostics(uri: vscode.Uri): void {
 			timestamp: new Date().toISOString(),
 			muted: false,
 		};
+
 		appendErrorEvent(errorEvent);
 		// TODO: show the gentle hint near the error here
 	}
 
-	loggedDiagnostics.set(uriKey, currentlyPresent);
+	loggedDiagnostics.set(uriKey, updatedLogged);
 }

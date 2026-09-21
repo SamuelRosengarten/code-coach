@@ -32,28 +32,44 @@ export interface DiagnosticSelection {
 
 export function selectNewDiagnostics(
 	diagnostics: readonly vscode.Diagnostic[],
-	previouslyLogged: ReadonlySet<string>
-): { toLog: DiagnosticSelection[]; currentlyPresent: Set<string> } {
-	const toLog: DiagnosticSelection[] = [];
-	const currentlyPresent = new Set<string>();
+	previouslyLogged: ReadonlySet<string>,
+	shouldDefer: (selection: DiagnosticSelection) => boolean = () => false
+): { toLog: DiagnosticSelection[]; updatedLogged: Set<string> } {
+	const currentIdentities = new Set<string>();
+	const selections: DiagnosticSelection[] = [];
 
 	for (const diagnostic of diagnostics) {
 		const errorType = resolveErrorType(diagnostic);
-
 		if (SYNTAX_NOISE_CODES.has(errorType)) {
 			continue;
 		}
-
 		const line = diagnostic.range.start.line + 1;
 		const column = diagnostic.range.start.character;
 		const identity = `${errorType}:${line}:${column}`;
 
-		currentlyPresent.add(identity);
-
-		if (!previouslyLogged.has(identity)) {
-			toLog.push({ errorType, line, column, identity });
-		}
+		currentIdentities.add(identity);
+		selections.push({ errorType, line, column, identity });
 	}
 
-	return { toLog, currentlyPresent };
+	// Keep previously-logged identities only if they're still present —
+	// ones that disappeared (fixed) are dropped so a repeat of the same
+	// mistake later gets logged again.
+	const updatedLogged = new Set<string>(
+		[...previouslyLogged].filter((identity) => currentIdentities.has(identity))
+	);
+
+	const toLog: DiagnosticSelection[] = [];
+
+	for (const selection of selections) {
+		if (previouslyLogged.has(selection.identity)) {
+			continue; // already logged and still present
+		}
+		if (shouldDefer(selection)) {
+			continue; // new, but still being actively edited — reconsider later
+		}
+		toLog.push(selection);
+		updatedLogged.add(selection.identity);
+	}
+
+	return { toLog, updatedLogged };
 }

@@ -1,11 +1,10 @@
 class Greeter {
   void greet({required String name}) {
-    print('Hello, $name');
+    print('Hello ${name}');
   }
 }
 
-void main() {
-  String label = 5;
-  int total = undefinedVariable;
-  Greeter().greet(name: 'Sam');
+void Main() {
+  String name = 2;
+  Greeter().greet(name: 'sasf');
 }
