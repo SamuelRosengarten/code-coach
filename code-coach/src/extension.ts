@@ -1,10 +1,12 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
+import { registerDiagnosticsListener } from './diagnosticsListener';
 
 let cachedStoragePath: string | undefined;
 
 export function activate(context: vscode.ExtensionContext){
     const storageDir = initStorage(context);
+	registerDiagnosticsListener(context);
     console.log(`Code Coach storage directory: ${storageDir}`);
 }
 
