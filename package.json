@@ -1,0 +1,60 @@
+{
+  "name": "code-coach",
+  "displayName": "Code Coach",
+  "description": "Turns raw compiler/linter errors into friendly, gentle coaching hints, and tracks a student's progress over time.",
+  "version": "0.1.0",
+  "publisher": "code-coach",
+  "engines": {
+    "vscode": "^1.85.0",
+    "node": ">=18"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/src/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Code Coach",
+      "properties": {
+        "codeCoach.muteThreshold": {
+          "type": "number",
+          "default": 3,
+          "minimum": 0,
+          "description": "How many times the same error type may occur within the mute window before its hint is suppressed."
+        },
+        "codeCoach.muteWindowMinutes": {
+          "type": "number",
+          "default": 10,
+          "exclusiveMinimum": 0,
+          "description": "Length of the rolling window, in minutes, over which repeated occurrences of an error type are counted."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "node --test 'out/test/**/*.test.js'",
+    "test:integration": "npm run compile && node ./out/integration/runTest.js",
+    "lint": "tsc --noEmit -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/vscode": "^1.138.0",
+    "@vscode/test-electron": "^3.1.0",
+    "typescript": "^5.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamuelRosengarten/code-coach.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SamuelRosengarten/code-coach/issues"
+  },
+  "homepage": "https://github.com/SamuelRosengarten/code-coach#readme",
+  "license": "SEE LICENSE IN SECURITY.md"
+}

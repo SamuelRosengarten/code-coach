@@ -1,4 +1,6 @@
-# Code Coach Design
+# Code Coach
+
+A VS Code extension that turns raw compiler/linter errors into gentle, plain-language coaching hints, and tracks a student's progress fixing them over time.
 
 **Design Reference:** https://claude.ai/design/p/7aec18e6-ff59-4189-a463-b0c7f128f285?file=Code+Coach.dc.html&via=share
 
@@ -12,17 +14,31 @@ The Code Coach design establishes the visual language and user interface for the
 - **Progress Reports**: Visual tracking of improvement across weeks
 
 ## Design Sections
+
 ### Color Palette
-*[Add color specifications here]*
+A calm, low-glare palette so hints read as supportive rather than alarming — avoiding the editor's usual red/yellow error colors:
+- **Background:** neutral editor background (inherits the active VS Code theme)
+- **Hint accent:** soft blue `#4A90D9` — used for the hint icon/border instead of error-red
+- **Success/progress:** muted green `#5FAE7A` — improvement graphs, resolved-error states
+- **Muted/suppressed:** neutral gray `#9AA0A6` — for hints currently muted by the repeat-count logic
+- **Text:** inherits the theme's foreground color for readability in both light and dark themes
 
 ### Typography
-*[Add font and text styling here]*
+Matches the host editor so hints feel native rather than like a separate tool:
+- **UI font:** VS Code's default UI font (`-apple-system, "Segoe UI", sans-serif` per platform)
+- **Code/inline references:** the user's configured editor font (`editor.fontFamily`)
+- **Hint body text:** regular weight, sentence case, no more than 2–3 short sentences per hint
 
 ### UI Components
-*[List main UI components and their styling]*
+- **Hover hint**: replaces the raw diagnostic message for a coached error type when hovering over it
+- **Inline decoration** *(planned)*: a subtle gutter icon marking lines with an active coaching hint
+- **Dashboard/sidebar panel** *(planned)*: a webview showing mistake-type breakdowns, a file/line heatmap, and weekly progress
+- **Session summary** *(planned)*: a short end-of-session message summarizing what was fixed
 
 ### Interaction Patterns
-*[Document key interactions and animations]*
+- Hints appear passively (on hover) rather than as interrupting popups
+- An error type that repeats often within a short window is muted automatically so coaching doesn't become nagging (see [Repeat counting & mute logic](#repeat-counting--mute-logic))
+- Muted errors silently fall back to the editor's normal diagnostic message instead of disappearing entirely
 
 ## Coaching Elements
 - Mistake type visualizations
@@ -34,7 +50,46 @@ The Code Coach design establishes the visual language and user interface for the
 - One-page exportable report format for sharing with tutors/mentors
 - Dashboard view for ongoing tracking
 
+## How it works
+
+1. **Diagnostics listener** — subscribes to `vscode.languages.onDidChangeDiagnostics` and logs every diagnostic to the console, confirming the extension is actually seeing compiler/linter errors as they appear (`src/diagnosticsHandler.ts`).
+2. **Friendly hints** — for one coached error type (currently TypeScript's `TS2304`, "Cannot find name"), a plain-language explanation is shown as a hover in place of the raw compiler message (`src/hints.ts`, `src/hoverProvider.ts`).
+3. **Repeat counting & mute logic** — occurrences of that error type within a rolling time window are tracked via `ExtensionContext.workspaceState`; once the count exceeds a threshold, the hint is suppressed until the window resets, so coaching doesn't nag (`src/muteTracker.ts`).
+4. **Progress log** — every occurrence (shown or muted) is appended as one JSON line to a log file in the extension's global storage folder, so the planned dashboard can show progress across sessions and workspaces (`src/logger.ts`, `src/storage.ts`, `src/schema.ts`).
+
+### Settings
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `codeCoach.muteThreshold` | `3` | How many times the same error type may occur within the window before its hint is suppressed. |
+| `codeCoach.muteWindowMinutes` | `10` | Length of the rolling window, in minutes, over which repeats are counted. |
+
+### Storage location
+
+Error events are logged to `<globalStorageUri>/error-log.jsonl`. `globalStorageUri` (rather than the workspace-scoped `storageUri`) is used deliberately: since the dashboard is meant to show progress "over weeks," a workspace-scoped log would reset every time a student opens a different project/repo.
+
+## Development
+
+```bash
+npm install
+npm run compile        # tsc build
+npm test               # unit test suite (node:test)
+npm run test:integration  # runs the extension in a real VS Code instance
+npm run watch          # tsc in watch mode
+```
+
+To try the extension by hand, open this folder in VS Code and press `F5` to launch an Extension Development Host.
+
+### Testing notes
+
+Two layers, both run in CI:
+
+- **Unit tests** (`test/`) cover the event schema, storage resolution, log writing, hint lookup, mute-tracking logic, and the diagnostics-handling pipeline — including a clean-install case with no pre-existing storage folder and checks that every logged line is valid JSON matching the schema.
+- **Integration tests** (`integration/`) launch a real VS Code instance via `@vscode/test-electron` and drive the extension end to end: activation creates the global storage folder on a fresh profile, the real TypeScript language service reports the coached error as `source: "ts"` / `code: 2304`, hovering it surfaces the friendly hint, and the occurrence lands in the JSONL log.
+
+The integration suite needs to download VS Code, so it requires network access to `update.code.visualstudio.com`. In CI it runs under `xvfb`.
+
 ---
 
-**Last updated:** September 18, 2026  
+**Last updated:** September 21, 2026
 **Related:** Visual Code Extension Project
