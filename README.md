@@ -57,6 +57,13 @@ Matches the host editor so hints feel native rather than like a separate tool:
 3. **Repeat counting & mute logic** — occurrences of that error type within a rolling time window are tracked via `ExtensionContext.workspaceState`; once the count exceeds a threshold, the hint is suppressed until the window resets, so coaching doesn't nag (`src/muteTracker.ts`).
 4. **Progress log** — every occurrence (shown or muted) is appended as one JSON line to a log file in the extension's global storage folder, so the planned dashboard can show progress across sessions and workspaces (`src/logger.ts`, `src/storage.ts`, `src/schema.ts`).
 
+### Settings
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `codeCoach.muteThreshold` | `3` | How many times the same error type may occur within the window before its hint is suppressed. |
+| `codeCoach.muteWindowMinutes` | `10` | Length of the rolling window, in minutes, over which repeats are counted. |
+
 ### Storage location
 
 Error events are logged to `<globalStorageUri>/error-log.jsonl`. `globalStorageUri` (rather than the workspace-scoped `storageUri`) is used deliberately: since the dashboard is meant to show progress "over weeks," a workspace-scoped log would reset every time a student opens a different project/repo.
@@ -65,16 +72,22 @@ Error events are logged to `<globalStorageUri>/error-log.jsonl`. `globalStorageU
 
 ```bash
 npm install
-npm run compile   # tsc build
-npm test          # runs the unit test suite (node:test)
-npm run watch      # tsc in watch mode
+npm run compile        # tsc build
+npm test               # unit test suite (node:test)
+npm run test:integration  # runs the extension in a real VS Code instance
+npm run watch          # tsc in watch mode
 ```
 
-To try the extension itself, open this folder in VS Code and press `F5` to launch an Extension Development Host.
+To try the extension by hand, open this folder in VS Code and press `F5` to launch an Extension Development Host.
 
 ### Testing notes
 
-The unit tests cover the schema, storage/logging, hint lookup, mute-tracking logic, and the diagnostics-handling pipeline end to end (including a simulated "clean install" with no existing storage folder, and manual-verification-style checks that logged lines are valid JSON matching the schema). Actually triggering a real compiler error and confirming the hover/hint renders correctly in a live editor still requires running the Extension Development Host interactively — that part hasn't been exercised by an automated test.
+Two layers, both run in CI:
+
+- **Unit tests** (`test/`) cover the event schema, storage resolution, log writing, hint lookup, mute-tracking logic, and the diagnostics-handling pipeline — including a clean-install case with no pre-existing storage folder and checks that every logged line is valid JSON matching the schema.
+- **Integration tests** (`integration/`) launch a real VS Code instance via `@vscode/test-electron` and drive the extension end to end: activation creates the global storage folder on a fresh profile, the real TypeScript language service reports the coached error as `source: "ts"` / `code: 2304`, hovering it surfaces the friendly hint, and the occurrence lands in the JSONL log.
+
+The integration suite needs to download VS Code, so it requires network access to `update.code.visualstudio.com`. In CI it runs under `xvfb`.
 
 ---
 
