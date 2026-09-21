@@ -1,0 +1,39 @@
+{
+  "name": "code-coach",
+  "displayName": "Code Coach",
+  "description": "Turns raw compiler/linter errors into friendly, gentle coaching hints, and tracks a student's progress over time.",
+  "version": "0.1.0",
+  "publisher": "code-coach",
+  "engines": {
+    "vscode": "^1.85.0",
+    "node": ">=18"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "node --test out/test/**/*.test.js",
+    "lint": "tsc --noEmit -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/vscode": "^1.138.0",
+    "typescript": "^5.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SamuelRosengarten/code-coach.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SamuelRosengarten/code-coach/issues"
+  },
+  "homepage": "https://github.com/SamuelRosengarten/code-coach#readme",
+  "license": "SEE LICENSE IN SECURITY.md"
+}
