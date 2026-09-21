@@ -11,7 +11,7 @@
 			"request": "launch",
 			"args": [
 				"--extensionDevelopmentPath=${workspaceFolder}",
-				"--disable-extensions"
+				"${workspaceFolder}/../test-fixtures/dart-sample"
 			],
 			"outFiles": [
 				"${workspaceFolder}/out/**/*.js"

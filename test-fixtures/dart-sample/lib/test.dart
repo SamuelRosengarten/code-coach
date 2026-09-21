@@ -5,9 +5,6 @@ class Greeter {
   }
 }
 
-void Main(){
-  String s =2;
-  Greeter().greet(s, name: name);
-  
-  
+void Main() {
+  String patate = 1;
 }
