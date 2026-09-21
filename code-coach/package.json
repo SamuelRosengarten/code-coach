@@ -39,6 +39,11 @@
         "title": "Refresh Stats",
         "icon": "$(refresh)",
         "category": "Code Coach"
+      },
+      {
+        "command": "codeCoach.manageMutedHints",
+        "title": "Manage Muted Hints",
+        "category": "Code Coach"
       }
     ],
     "menus": {

@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { registerDiagnosticsListener } from './diagnosticsListener';
 import { registerHintDecorations, clearHintsForType } from './hintDecorations';
-import { muteType } from './muteStore';
+import { muteType, unmuteType, listMutedTypes } from './muteStore';
+import { formatLanguageLabel } from './stats';
 import { StatsViewProvider } from './statsViewProvider';
 
 let cachedStoragePath: string | undefined;
@@ -20,10 +21,40 @@ export function activate(context: vscode.ExtensionContext){
 			muteType(language, errorType);
 			clearHintsForType(language, errorType);
 		}),
+		vscode.commands.registerCommand('codeCoach.manageMutedHints', () => manageMutedHints()),
 		statsViewProvider
 	);
 
     console.log(`Code Coach storage directory: ${storageDir}`);
+}
+
+async function manageMutedHints(): Promise<void> {
+	const muted = listMutedTypes();
+	if (muted.length === 0) {
+		vscode.window.showInformationMessage('Code Coach: no hints are currently muted.');
+		return;
+	}
+
+	const items = muted.map((m) => ({
+		label: `${formatLanguageLabel(m.language)}: ${m.errorType}`,
+		picked: true,
+		muted: m,
+	}));
+
+	const selected = await vscode.window.showQuickPick(items, {
+		canPickMany: true,
+		placeHolder: 'Uncheck a hint to turn it back on',
+	});
+	if (!selected) {
+		return;
+	}
+
+	const stillMuted = new Set(selected.map((item) => item.muted));
+	for (const item of items) {
+		if (!stillMuted.has(item.muted)) {
+			unmuteType(item.muted.language, item.muted.errorType);
+		}
+	}
 }
 
 export function initStorage(context: vscode.ExtensionContext): string {

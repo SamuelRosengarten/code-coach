@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { initStorage } from '../extension';
-import { isMuted, muteType } from '../muteStore';
+import { isMuted, muteType, unmuteType, listMutedTypes } from '../muteStore';
 
 suite('Mute Store Test Suite', () => {
 	let tempRoot: string;
@@ -37,5 +37,32 @@ suite('Mute Store Test Suite', () => {
 		muteType('dart', 'undefined_identifier');
 		assert.doesNotThrow(() => muteType('dart', 'undefined_identifier'));
 		assert.strictEqual(isMuted('dart', 'undefined_identifier'), true);
+	});
+
+	test('listMutedTypes reflects every muted type', () => {
+		muteType('dart', 'undefined_identifier');
+		muteType('typescript', '2345');
+
+		const muted = listMutedTypes();
+		assert.strictEqual(muted.length, 2);
+		assert.deepStrictEqual(
+			muted.sort((a, b) => a.language.localeCompare(b.language)),
+			[
+				{ language: 'dart', errorType: 'undefined_identifier' },
+				{ language: 'typescript', errorType: '2345' },
+			]
+		);
+	});
+
+	test('unmuting a type makes it show up again', () => {
+		muteType('dart', 'undefined_identifier');
+		unmuteType('dart', 'undefined_identifier');
+
+		assert.strictEqual(isMuted('dart', 'undefined_identifier'), false);
+		assert.deepStrictEqual(listMutedTypes(), []);
+	});
+
+	test('unmuting a type that was never muted does not throw', () => {
+		assert.doesNotThrow(() => unmuteType('dart', 'undefined_identifier'));
 	});
 });
