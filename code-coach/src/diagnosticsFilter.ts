@@ -34,7 +34,7 @@ export function selectNewDiagnostics(
 	diagnostics: readonly vscode.Diagnostic[],
 	previouslyLogged: ReadonlySet<string>,
 	shouldDefer: (selection: DiagnosticSelection) => boolean = () => false
-): { toLog: DiagnosticSelection[]; updatedLogged: Set<string> } {
+): { toLog: DiagnosticSelection[]; updatedLogged: Set<string>; removed: string[] } {
 	const currentIdentities = new Set<string>();
 	const selections: DiagnosticSelection[] = [];
 
@@ -54,6 +54,7 @@ export function selectNewDiagnostics(
 	// Keep previously-logged identities only if they're still present —
 	// ones that disappeared (fixed) are dropped so a repeat of the same
 	// mistake later gets logged again.
+	const removed = [...previouslyLogged].filter((identity) => !currentIdentities.has(identity));
 	const updatedLogged = new Set<string>(
 		[...previouslyLogged].filter((identity) => currentIdentities.has(identity))
 	);
@@ -71,5 +72,5 @@ export function selectNewDiagnostics(
 		updatedLogged.add(selection.identity);
 	}
 
-	return { toLog, updatedLogged };
+	return { toLog, updatedLogged, removed };
 }

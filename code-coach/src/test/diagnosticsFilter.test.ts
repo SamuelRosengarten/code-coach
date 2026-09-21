@@ -73,6 +73,22 @@ suite('Diagnostics Filter Test Suite', () => {
 		assert.strictEqual(second.toLog.length, 1);
 	});
 
+	test('reports a fixed diagnostic as removed', () => {
+		const diagnostic = makeDiagnostic(9, 12, 'invalid_assignment');
+		const first = selectNewDiagnostics([diagnostic], new Set());
+		const second = selectNewDiagnostics([], first.updatedLogged);
+
+		assert.deepStrictEqual(second.removed, ['invalid_assignment:10:12']);
+	});
+
+	test('does not report a still-present diagnostic as removed', () => {
+		const diagnostic = makeDiagnostic(9, 12, 'invalid_assignment');
+		const first = selectNewDiagnostics([diagnostic], new Set());
+		const second = selectNewDiagnostics([diagnostic], first.updatedLogged);
+
+		assert.deepStrictEqual(second.removed, []);
+	});
+
 	test('re-logs a diagnostic that disappeared and came back', () => {
 		const diagnostic = makeDiagnostic(9, 12, 'invalid_assignment');
 		const firstPass = selectNewDiagnostics([diagnostic], new Set());

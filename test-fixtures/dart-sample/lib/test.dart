@@ -1,10 +1,12 @@
 class Greeter {
-  void greet({required String name}) {
+  String greet(String s, {required String name}) {
     print('Hello ${name}');
+    return 2;
   }
 }
 
-void Main() {
-  String name = 2;
-  Greeter().greet(name: 'sasf');
+void Main(){
+  String s =2;
+  Greeter().greet(s, name: name);
+  
 }

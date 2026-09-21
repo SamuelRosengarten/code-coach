@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { appendErrorEvent } from './errorLogger';
 import { ErrorEvent } from './types';
 import { selectNewDiagnostics } from './diagnosticsFilter';
+import { getHint } from './hints';
+import { showHint, clearHint } from './hintDecorations';
 
 const DEBOUNCE_MS = 1200;
 const loggedDiagnostics = new Map<string, Set<string>>();
@@ -42,7 +44,7 @@ function processStableDiagnostics(uri: vscode.Uri): void {
 		? activeEditor.selection.active.line + 1
 		: undefined;
 
-	const { toLog, updatedLogged } = selectNewDiagnostics(
+	const { toLog, updatedLogged, removed } = selectNewDiagnostics(
 		errorDiagnostics,
 		previouslyLogged,
 		(selection) => selection.line === activeLine
@@ -51,19 +53,27 @@ function processStableDiagnostics(uri: vscode.Uri): void {
 	const document = vscode.workspace.textDocuments.find(
 		(doc) => doc.uri.toString() === uriKey
 	);
+	const language = document?.languageId ?? 'unknown';
+
+	for (const identity of removed) {
+		const columnSeparator = identity.lastIndexOf(':');
+		const lineSeparator = identity.lastIndexOf(':', columnSeparator - 1);
+		const line = Number(identity.slice(lineSeparator + 1, columnSeparator));
+		clearHint(uri, line);
+	}
 
 	for (const selection of toLog) {
 		const errorEvent: ErrorEvent = {
 			errorType: selection.errorType,
 			filePath: vscode.workspace.asRelativePath(uri),
 			line: selection.line,
-			language: document?.languageId ?? 'unknown',
+			language,
 			timestamp: new Date().toISOString(),
 			muted: false,
 		};
 
 		appendErrorEvent(errorEvent);
-		// TODO: show the gentle hint near the error here
+		showHint(uri, selection.line, getHint(selection.errorType, language));
 	}
 
 	loggedDiagnostics.set(uriKey, updatedLogged);

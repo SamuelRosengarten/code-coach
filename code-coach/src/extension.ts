@@ -1,12 +1,14 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { registerDiagnosticsListener } from './diagnosticsListener';
+import { registerHintDecorations } from './hintDecorations';
 import { StatsViewProvider } from './statsViewProvider';
 
 let cachedStoragePath: string | undefined;
 
 export function activate(context: vscode.ExtensionContext){
     const storageDir = initStorage(context);
+	registerHintDecorations(context);
 	registerDiagnosticsListener(context);
 
 	const statsViewProvider = new StatsViewProvider(context.extensionUri);
