@@ -11,6 +11,8 @@ const decorationType = vscode.window.createTextEditorDecorationType({
 interface ActiveHint {
 	line: number;
 	message: string;
+	errorType: string;
+	language: string;
 }
 
 const hintsByUri = new Map<string, ActiveHint[]>();
@@ -29,10 +31,10 @@ export function registerHintDecorations(context: vscode.ExtensionContext): void 
 	);
 }
 
-export function showHint(uri: vscode.Uri, line: number, message: string): void {
+export function showHint(uri: vscode.Uri, line: number, message: string, errorType: string, language: string): void {
 	const uriKey = uri.toString();
 	const hints = (hintsByUri.get(uriKey) ?? []).filter((h) => h.line !== line);
-	hints.push({ line, message });
+	hints.push({ line, message, errorType, language });
 	hintsByUri.set(uriKey, hints);
 	applyDecorationsForUri(uri);
 }
@@ -45,6 +47,16 @@ export function clearHint(uri: vscode.Uri, line: number): void {
 	}
 	hintsByUri.set(uriKey, hints.filter((h) => h.line !== line));
 	applyDecorationsForUri(uri);
+}
+
+export function clearHintsForType(language: string, errorType: string): void {
+	for (const [uriKey, hints] of hintsByUri) {
+		const filtered = hints.filter((h) => !(h.language === language && h.errorType === errorType));
+		if (filtered.length !== hints.length) {
+			hintsByUri.set(uriKey, filtered);
+			applyDecorationsForUri(vscode.Uri.parse(uriKey));
+		}
+	}
 }
 
 function applyDecorationsForUri(uri: vscode.Uri): void {
@@ -66,9 +78,15 @@ function applyDecorations(editor: vscode.TextEditor): void {
 			continue;
 		}
 		const lineLength = editor.document.lineAt(lineIndex).text.length;
+		const dismissArgs = encodeURIComponent(JSON.stringify([hint.language, hint.errorType]));
+		const hoverMessage = new vscode.MarkdownString(
+			`${hint.message}\n\n[Don't show this hint again](command:codeCoach.dismissHint?${dismissArgs})`
+		);
+		hoverMessage.isTrusted = true;
 		options.push({
 			range: new vscode.Range(lineIndex, lineLength, lineIndex, lineLength),
 			renderOptions: { after: { contentText: `💡 ${hint.message}` } },
+			hoverMessage,
 		});
 	}
 

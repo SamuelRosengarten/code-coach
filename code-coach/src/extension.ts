@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { registerDiagnosticsListener } from './diagnosticsListener';
-import { registerHintDecorations } from './hintDecorations';
+import { registerHintDecorations, clearHintsForType } from './hintDecorations';
+import { muteType } from './muteStore';
 import { StatsViewProvider } from './statsViewProvider';
 
 let cachedStoragePath: string | undefined;
@@ -15,6 +16,10 @@ export function activate(context: vscode.ExtensionContext){
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(StatsViewProvider.viewType, statsViewProvider),
 		vscode.commands.registerCommand('codeCoach.refreshStats', () => statsViewProvider.refresh()),
+		vscode.commands.registerCommand('codeCoach.dismissHint', (language: string, errorType: string) => {
+			muteType(language, errorType);
+			clearHintsForType(language, errorType);
+		}),
 		statsViewProvider
 	);
 

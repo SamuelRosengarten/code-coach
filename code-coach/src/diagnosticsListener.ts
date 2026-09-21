@@ -4,6 +4,7 @@ import { ErrorEvent } from './types';
 import { selectNewDiagnostics } from './diagnosticsFilter';
 import { getHint } from './hints';
 import { showHint, clearHint } from './hintDecorations';
+import { isMuted } from './muteStore';
 
 const DEBOUNCE_MS = 1200;
 const loggedDiagnostics = new Map<string, Set<string>>();
@@ -63,17 +64,20 @@ function processStableDiagnostics(uri: vscode.Uri): void {
 	}
 
 	for (const selection of toLog) {
+		const muted = isMuted(language, selection.errorType);
 		const errorEvent: ErrorEvent = {
 			errorType: selection.errorType,
 			filePath: vscode.workspace.asRelativePath(uri),
 			line: selection.line,
 			language,
 			timestamp: new Date().toISOString(),
-			muted: false,
+			muted,
 		};
 
 		appendErrorEvent(errorEvent);
-		showHint(uri, selection.line, getHint(selection.errorType, language));
+		if (!muted) {
+			showHint(uri, selection.line, getHint(selection.errorType, language), selection.errorType, language);
+		}
 	}
 
 	loggedDiagnostics.set(uriKey, updatedLogged);
