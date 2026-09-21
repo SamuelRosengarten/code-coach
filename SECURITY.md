@@ -30,10 +30,12 @@ We recommend always using the latest version to get security updates and improve
 
 ## Security Considerations
 
-Code Coach runs locally in your VS Code environment and:
-- Does **not** send your code to external servers
+Code Coach runs locally in your VS Code environment by default:
+- With `codeCoach.hintProvider` set to `"off"` (the default), nothing ever leaves your machine — hints come from a built-in, offline library, and mistake logs are written only to local storage.
+- If you opt into `codeCoach.hintProvider: "claude"`, the diagnostic's error type, language, and error message (not your source file) are sent to the Claude API to generate a reworded hint. Your Anthropic API key is stored via VS Code's `SecretStorage`, never in settings files, and is used only for requests to Anthropic.
+- If you opt into `codeCoach.hintProvider: "local"`, that same limited data is sent to a model server running on your own machine (Ollama, by default) and never leaves your device.
 - Does **not** store personal data
-- Only logs error patterns locally on your machine
+- Mistake logs (error type, file, line, language, timestamp) are always written only to local storage, regardless of `hintProvider`
 
 ## Questions?
 
