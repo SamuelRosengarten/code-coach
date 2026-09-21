@@ -1,0 +1,199 @@
+body {
+	margin: 0;
+	padding: 12px;
+	color: var(--vscode-foreground);
+	font-family: var(--vscode-font-family);
+	font-size: var(--vscode-font-size);
+	background: var(--vscode-sideBar-background);
+}
+
+.cc-app {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.cc-loading,
+.cc-empty {
+	color: var(--vscode-descriptionForeground);
+	text-align: center;
+	padding: 24px 8px;
+}
+
+.cc-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 8px;
+}
+
+.cc-title {
+	font-weight: 600;
+}
+
+.cc-range {
+	font-size: 0.9em;
+	color: var(--vscode-descriptionForeground);
+}
+
+.cc-seg {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.cc-seg button {
+	font-family: inherit;
+	font-size: 0.85em;
+	padding: 2px 10px;
+	border-radius: 999px;
+	border: 1px solid var(--vscode-panel-border);
+	background: transparent;
+	color: var(--vscode-descriptionForeground);
+	cursor: pointer;
+}
+
+.cc-seg button:hover {
+	background: var(--vscode-toolbar-hoverBackground);
+}
+
+.cc-seg button.on {
+	background: var(--vscode-badge-background);
+	color: var(--vscode-badge-foreground);
+	border-color: var(--vscode-badge-background);
+}
+
+.cc-metrics {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 8px;
+}
+
+.cc-card {
+	background: var(--vscode-editorWidget-background);
+	border: 1px solid var(--vscode-widget-border, var(--vscode-panel-border));
+	border-radius: 6px;
+	padding: 8px 10px;
+}
+
+.cc-label {
+	font-size: 0.78em;
+	color: var(--vscode-descriptionForeground);
+}
+
+.cc-num {
+	font-size: 1.3em;
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+.cc-chart-head {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	margin-bottom: 6px;
+}
+
+.cc-chart-title {
+	font-weight: 600;
+}
+
+.cc-busiest {
+	font-size: 0.8em;
+	color: var(--vscode-descriptionForeground);
+}
+
+.cc-chart svg {
+	width: 100%;
+	height: auto;
+	display: block;
+}
+
+.cc-day-label {
+	font-size: 6px;
+	fill: var(--vscode-descriptionForeground);
+}
+
+.cc-list-title {
+	font-weight: 600;
+	margin-bottom: 4px;
+}
+
+.cc-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.9em;
+	padding: 4px 0;
+	border-top: 1px solid var(--vscode-panel-border);
+}
+
+.cc-row:first-child {
+	border-top: none;
+}
+
+.cc-dot {
+	width: 9px;
+	height: 9px;
+	border-radius: 2px;
+	flex: none;
+}
+
+.cc-row-name {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.cc-row-total {
+	font-variant-numeric: tabular-nums;
+}
+
+.cc-row-delta {
+	width: 34px;
+	text-align: right;
+	font-size: 0.85em;
+	font-variant-numeric: tabular-nums;
+}
+
+.cc-delta-down {
+	color: var(--vscode-charts-green, var(--vscode-terminal-ansiGreen));
+}
+
+.cc-delta-up {
+	color: var(--vscode-charts-red, var(--vscode-errorForeground));
+}
+
+.cc-delta-flat {
+	color: var(--vscode-descriptionForeground);
+}
+
+.cc-insight {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+	background: var(--vscode-textBlockQuote-background);
+	border-left: 3px solid var(--vscode-textLink-foreground);
+	border-radius: 4px;
+	padding: 8px 10px;
+	font-size: 0.88em;
+	line-height: 1.5;
+}
+
+.cc-color-0 { background: var(--vscode-charts-blue); fill: var(--vscode-charts-blue); }
+.cc-color-1 { background: var(--vscode-charts-red); fill: var(--vscode-charts-red); }
+.cc-color-2 { background: var(--vscode-charts-yellow); fill: var(--vscode-charts-yellow); }
+.cc-color-3 { background: var(--vscode-charts-orange); fill: var(--vscode-charts-orange); }
+.cc-color-4 { background: var(--vscode-charts-green); fill: var(--vscode-charts-green); }
+.cc-color-5 { background: var(--vscode-charts-purple); fill: var(--vscode-charts-purple); }
+.cc-color-6 { background: var(--vscode-charts-foreground); fill: var(--vscode-charts-foreground); }
+
+.cc-sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}

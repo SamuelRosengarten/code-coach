@@ -1,12 +1,21 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import { registerDiagnosticsListener } from './diagnosticsListener';
+import { StatsViewProvider } from './statsViewProvider';
 
 let cachedStoragePath: string | undefined;
 
 export function activate(context: vscode.ExtensionContext){
     const storageDir = initStorage(context);
 	registerDiagnosticsListener(context);
+
+	const statsViewProvider = new StatsViewProvider(context.extensionUri);
+	context.subscriptions.push(
+		vscode.window.registerWebviewViewProvider(StatsViewProvider.viewType, statsViewProvider),
+		vscode.commands.registerCommand('codeCoach.refreshStats', () => statsViewProvider.refresh()),
+		statsViewProvider
+	);
+
     console.log(`Code Coach storage directory: ${storageDir}`);
 }
 
