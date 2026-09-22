@@ -2,7 +2,7 @@
   "name": "code-coach-ai",
   "displayName": "Code Coach AI",
   "description": "A gentle coaching companion that explains your coding mistakes in plain language, tracks patterns over time, and helps you learn faster.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "samuelrosengarten",
   "license": "MIT",
   "icon": "media/marketplace-icon.png",
