@@ -1,13 +1,23 @@
 {
-  "name": "code-coach",
-  "displayName": "code-coach",
-  "description": "",
+  "name": "code-coach-ai",
+  "displayName": "Code Coach AI",
+  "description": "A gentle coaching companion that explains your coding mistakes in plain language, tracks patterns over time, and helps you learn faster.",
   "version": "0.0.1",
+  "publisher": "samuelrosengarten",
+  "license": "MIT",
+  "icon": "media/marketplace-icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SamuelRosengarten/code-coach.git",
+    "directory": "code-coach"
+  },
   "engines": {
-    "vscode": "^1.129.0"
+    "vscode": "^1.138.0"
   },
   "categories": [
-    "Other"
+    "Education",
+    "Linters",
+    "Visualization"
   ],
   "activationEvents": [
     "onStartupFinished"
