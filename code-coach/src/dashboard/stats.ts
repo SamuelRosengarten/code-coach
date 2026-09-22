@@ -1,4 +1,8 @@
-import { ErrorEvent } from './types';
+// Pure number-crunching for the dashboard: turns the flat list of logged
+// ErrorEvents into the day-by-day and week-by-week summaries the sidebar
+// webview (statsViewProvider.ts) renders as charts. No vscode dependency,
+// so this is easy to unit test directly — see ../test/stats.test.ts.
+import { ErrorEvent } from '../types';
 
 const DAY_COUNT = 7;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -23,11 +27,13 @@ const LANGUAGE_LABELS: Record<string, string> = {
 	'objective-c': 'Objective-C',
 };
 
+/** One column in the daily chart: `key` is a sortable "YYYY-MM-DD", `label` a short display string like "Mon". */
 export interface DayInfo {
 	key: string;
 	label: string;
 }
 
+/** Per-language rollup: `daily[i]` lines up with `StatsPayload.days[i]`. */
 export interface LanguageStats {
 	daily: number[];
 	total: number;
@@ -35,6 +41,7 @@ export interface LanguageStats {
 	uniqueFiles: number;
 }
 
+/** Same shape as LanguageStats, but for one specific error type within one language. */
 export interface TypeStats {
 	daily: number[];
 	total: number;
@@ -42,6 +49,7 @@ export interface TypeStats {
 	allTimeTotal: number;
 }
 
+/** Everything computeStatsPayload() returns — the day-by-day view of the dashboard. */
 export interface StatsPayload {
 	days: DayInfo[];
 	rangeLabel: string;
@@ -54,11 +62,13 @@ export interface StatsPayload {
 	uniqueFiles: number;
 }
 
+/** One column in the weekly trend chart. `label` is "this" for the most recent week, otherwise "W1", "W2", etc. */
 export interface WeekInfo {
 	key: string;
 	label: string;
 }
 
+/** Everything computeWeeklyTrend() returns — the week-by-week view, used for the "trending up/down" indicators. */
 export interface WeeklyTrendPayload {
 	weeks: WeekInfo[];
 	seriesByType: Record<string, number[]>;
@@ -66,6 +76,13 @@ export interface WeeklyTrendPayload {
 	topTypes: string[];
 }
 
+/**
+ * Buckets events into `weekCount` weekly columns (oldest first, most
+ * recent last) per error type, optionally filtered to one language.
+ * `topTypes` is the (at most) two error types with the highest count in
+ * the most recent week, used to pick which lines the dashboard highlights
+ * by default.
+ */
 export function computeWeeklyTrend(
 	events: readonly ErrorEvent[],
 	now: Date = new Date(),
@@ -96,7 +113,12 @@ export function computeWeeklyTrend(
 		if (weeksAgo >= weekCount) {
 			continue;
 		}
+		// weeksAgo counts backward from "now" (0 = this week); index
+		// counts forward through the output array so the most recent
+		// week ends up last, matching `weeks` above.
 		const index = weekCount - 1 - weeksAgo;
+		// `??=`-style lazy init: reuse the array for this errorType if one
+		// exists already, otherwise create and store a fresh all-zero one.
 		const series = seriesByType[event.errorType] ?? (seriesByType[event.errorType] = new Array(weekCount).fill(0));
 		series[index]++;
 		languageByType[event.errorType] = event.language;
@@ -109,21 +131,31 @@ export function computeWeeklyTrend(
 	return { weeks, seriesByType, languageByType, topTypes };
 }
 
+/** Maps a language ID (e.g. "csharp") to its display name (e.g. "C#"), falling back to capitalizing the raw ID. */
 export function formatLanguageLabel(language: string): string {
 	return LANGUAGE_LABELS[language] ?? (language.charAt(0).toUpperCase() + language.slice(1));
 }
 
+/** Formats a date as a sortable, timezone-free "YYYY-MM-DD" string, used as a lookup key throughout this file. */
 function toDateKey(date: Date): string {
 	const y = date.getFullYear();
-	const m = String(date.getMonth() + 1).padStart(2, '0');
+	const m = String(date.getMonth() + 1).padStart(2, '0'); // getMonth() is 0-based (0 = January)
 	const d = String(date.getDate()).padStart(2, '0');
 	return `${y}-${m}-${d}`;
 }
 
+/** Same calendar day as `date`, but at midnight — strips the time-of-day so day comparisons ignore it. */
 function startOfDay(date: Date): Date {
 	return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+/**
+ * Builds `count` consecutive DayInfo entries ending `offsetDays` days
+ * before `now`'s calendar day (oldest first). `offsetDays: 0` gives the
+ * most recent `count` days including today; `offsetDays: count` gives the
+ * `count` days before that — which is how computeStatsPayload() below
+ * gets both "this week" and "the week before" from the same helper.
+ */
 function buildDayRange(now: Date, count: number, offsetDays: number): DayInfo[] {
 	const today = startOfDay(now);
 	const weekdayFormatter = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
@@ -135,6 +167,7 @@ function buildDayRange(now: Date, count: number, offsetDays: number): DayInfo[] 
 	return days;
 }
 
+/** Formats a day range as a display string like "Sep 15 – Sep 21", for the dashboard's header. */
 function formatRangeLabel(days: DayInfo[], now: Date): string {
 	if (days.length === 0) {
 		return '';
@@ -153,10 +186,19 @@ function emptyTypeStats(): TypeStats {
 	return { daily: new Array(DAY_COUNT).fill(0), total: 0, previousTotal: 0, allTimeTotal: 0 };
 }
 
+/**
+ * Builds the full daily dashboard payload from the raw event log: per-day
+ * counts for the last DAY_COUNT days (`days`/`byLanguage[l].daily`), plus
+ * a `previousTotal` for the DAY_COUNT days before that — comparing the two
+ * is what lets the dashboard show "up/down from last week" per language
+ * and per error type, without a second pass over the events.
+ */
 export function computeStatsPayload(events: readonly ErrorEvent[], now: Date = new Date()): StatsPayload {
 	const days = buildDayRange(now, DAY_COUNT, 0);
 	const previousDays = buildDayRange(now, DAY_COUNT, DAY_COUNT);
 
+	// Map from date key -> position in `days`, so the main loop below can
+	// place each event in O(1) instead of searching `days` every time.
 	const dayIndexByKey = new Map<string, number>(days.map((d, i) => [d.key, i]));
 	const previousKeys = new Set(previousDays.map((d) => d.key));
 
@@ -183,7 +225,7 @@ export function computeStatsPayload(events: readonly ErrorEvent[], now: Date = n
 			continue;
 		}
 		const key = toDateKey(eventDate);
-		const dayIndex = dayIndexByKey.get(key);
+		const dayIndex = dayIndexByKey.get(key); // undefined if the event predates the current window
 
 		const languageStats = byLanguage[event.language];
 		const typeStatsByLanguage = byLanguageAndType[event.language];

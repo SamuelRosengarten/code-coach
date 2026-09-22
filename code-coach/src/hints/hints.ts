@@ -1,3 +1,9 @@
+/**
+ * One entry in the built-in, offline hint library below. `language` is
+ * optional: leaving it out (e.g. 'no-unused-vars') makes the entry match
+ * that error code in *any* language, while entries that set it only match
+ * that one language — see getHint()'s specific-before-generic lookup order.
+ */
 interface HintEntry {
 	errorType: string;
 	language?: string;
@@ -6,6 +12,9 @@ interface HintEntry {
 
 const FALLBACK_HINT = 'New mistake spotted — take a moment to read the error message before fixing it.';
 
+// The rule-based hint library — free, instant, fully offline. Used as-is
+// when codeCoach.hintProvider is "off" (the default), and as the fallback
+// text if AI rewording (src/hints/rewordHint.ts) is enabled but fails.
 const HINTS: HintEntry[] = [
 	// TypeScript / JavaScript
 	{ errorType: '2345', language: 'typescript', message: "Type mismatch — check the argument's type against what the function expects." },
@@ -26,6 +35,13 @@ const HINTS: HintEntry[] = [
 	{ errorType: 'reportArgumentType', language: 'python', message: "This argument's type doesn't match what the function expects." },
 ];
 
+/**
+ * Looks up the hint text for one error. Tries a language-specific entry
+ * first (e.g. Dart's 'undefined_identifier'), then a generic one that
+ * applies to any language (e.g. 'no-unused-vars'), then falls back to a
+ * generic "something's wrong here" message so there's always something to
+ * show.
+ */
 export function getHint(errorType: string, language: string): string {
 	const specific = HINTS.find((h) => h.errorType === errorType && h.language === language);
 	if (specific) {

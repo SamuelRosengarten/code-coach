@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { getKindLabel } from '../hintLabels';
+import { getKindLabel } from '../hints/hintLabels';
 
 suite('Hint Labels Test Suite', () => {
 	test('returns a language-specific label when one exists', () => {

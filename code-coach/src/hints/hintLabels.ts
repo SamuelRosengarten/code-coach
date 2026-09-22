@@ -1,3 +1,8 @@
+/**
+ * A short (2-3 word) display name for an error type, used only in the
+ * dashboard (e.g. "Type mismatch" as a chart label) rather than as the
+ * full hint sentence shown in the editor — see src/hints/hints.ts for that.
+ */
 interface LabelEntry {
 	errorType: string;
 	language?: string;
@@ -24,6 +29,11 @@ const LABELS: LabelEntry[] = [
 	{ errorType: 'reportArgumentType', language: 'python', label: 'Argument type mismatch' },
 ];
 
+/**
+ * Turns a raw error code with no curated label into a readable guess, e.g.
+ * 'some_weird_code' -> 'Some weird code'. Used only when nothing in LABELS
+ * above matches.
+ */
 function titleCaseFallback(errorType: string): string {
 	const spaced = errorType.replace(/[_-]+/g, ' ').trim();
 	if (spaced.length === 0) {
@@ -32,6 +42,7 @@ function titleCaseFallback(errorType: string): string {
 	return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
+/** Same specific-then-generic-then-fallback lookup order as getHint() in ./hints.ts. */
 export function getKindLabel(errorType: string, language: string): string {
 	const specific = LABELS.find((l) => l.errorType === errorType && l.language === language);
 	if (specific) {

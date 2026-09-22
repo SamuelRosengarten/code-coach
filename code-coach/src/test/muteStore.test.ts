@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { initStorage } from '../extension';
-import { isMuted, muteType, unmuteType, listMutedTypes } from '../muteStore';
+import { isMuted, muteType, unmuteType, listMutedTypes } from '../storage/muteStore';
 
 suite('Mute Store Test Suite', () => {
 	let tempRoot: string;

@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { getHint } from '../hints';
+import { getHint } from '../hints/hints';
 
 suite('Hints Test Suite', () => {
 	test('returns a language-specific hint when one exists', () => {
