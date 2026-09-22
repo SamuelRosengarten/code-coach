@@ -3,22 +3,36 @@
 	const app = document.getElementById('app');
 
 	const COLOR_COUNT = 7;
-	const state = { payload: null, language: 'All' };
+	const ALL_LANGUAGES = 'All';
+
+	const state = {
+		language: ALL_LANGUAGES,
+		languages: [],
+		languageLabels: {},
+		trendByLanguage: {},
+		kindEntriesByLanguage: {},
+		muteThreshold: 20,
+		muteWindowMinutes: 5,
+		mutedTypes: new Set(),
+	};
 
 	window.addEventListener('message', (event) => {
 		const message = event.data;
 		if (message.type === 'stats') {
-			state.payload = message.payload;
-			if (state.language !== 'All' && !state.payload.languages.includes(state.language)) {
-				state.language = 'All';
+			state.languages = message.languages || [];
+			state.languageLabels = message.languageLabels || {};
+			state.trendByLanguage = message.trendByLanguage || {};
+			state.kindEntriesByLanguage = message.kindEntriesByLanguage || {};
+			state.muteThreshold = message.muteThreshold || 20;
+			state.muteWindowMinutes = message.muteWindowMinutes || 5;
+			state.mutedTypes = new Set(message.mutedTypes || []);
+			if (state.language !== ALL_LANGUAGES && !state.languages.includes(state.language)) {
+				state.language = ALL_LANGUAGES;
 			}
 			render();
 		} else if (message.type === 'error') {
 			app.innerHTML = '';
-			const p = document.createElement('p');
-			p.className = 'cc-empty';
-			p.textContent = 'Code Coach could not load your stats.';
-			app.appendChild(p);
+			app.appendChild(el('p', 'cc-empty', 'Code Coach could not load your stats.'));
 		}
 	});
 
@@ -35,212 +49,303 @@
 		return node;
 	}
 
-	function sum(values) {
-		return values.reduce((a, b) => a + b, 0);
+	function currentTrend() {
+		return state.trendByLanguage[state.language];
 	}
 
-	function formatDelta(delta) {
-		if (delta === 0) {
-			return '0';
-		}
-		return (delta > 0 ? '+' : '−') + Math.abs(delta);
+	function currentKindEntries() {
+		return state.kindEntriesByLanguage[state.language] || [];
 	}
 
-	function deltaClass(delta) {
-		if (delta < 0) {
-			return 'cc-delta-down';
-		}
-		if (delta > 0) {
-			return 'cc-delta-up';
-		}
-		return 'cc-delta-flat';
+	function isMutedEntry(language, errorType) {
+		return state.mutedTypes.has(language + '::' + errorType);
 	}
 
-	function currentEntries(payload) {
-		if (state.language === 'All') {
-			return payload.languages.map((lang) => {
-				const stats = payload.byLanguage[lang];
-				return { key: lang, name: payload.languageLabels[lang] || lang, ...stats };
-			});
+	function formatKindDelta(entry) {
+		if (entry.previousTotal === 0) {
+			return { text: 'new', cls: 'cc-delta-new' };
 		}
-		const typeMap = payload.byLanguageAndType[state.language] || {};
-		return Object.keys(typeMap).map((type) => ({ key: type, name: type, ...typeMap[type] }));
+		const pct = Math.round(((entry.total - entry.previousTotal) / entry.previousTotal) * 100);
+		if (pct === 0) {
+			return { text: '0%', cls: 'cc-delta-flat' };
+		}
+		return { text: (pct > 0 ? '+' : '') + pct + '%', cls: pct < 0 ? 'cc-delta-good' : 'cc-delta-bad' };
 	}
 
-	function buildChart(days, entries) {
+	function labelFor(errorType) {
+		const found = currentKindEntries().find((k) => k.errorType === errorType);
+		return found ? found.label : errorType;
+	}
+
+	function trendPhrase(series) {
+		const firstSeen = series.find((v) => v > 0);
+		const last = series[series.length - 1];
+		if (firstSeen === undefined) {
+			return 'has no history yet';
+		}
+		const pct = Math.round(((last - firstSeen) / firstSeen) * 100);
+		if (Math.abs(pct) < 15) {
+			return 'is holding steady';
+		}
+		return pct < 0 ? `has fallen by ${Math.abs(pct)}% since week one` : `is up ${pct}% since week one`;
+	}
+
+	function buildInsight(trend) {
+		const [primaryType, secondaryType] = trend.topTypes;
+		if (!primaryType) {
+			return 'No mistakes logged yet this week. Start coding — patterns will show up here.';
+		}
+		const primaryText = `${labelFor(primaryType)} (gold) ${trendPhrase(trend.seriesByType[primaryType])}.`;
+		if (!secondaryType) {
+			return primaryText;
+		}
+		const secondaryText = `${labelFor(secondaryType)} (dotted) ${trendPhrase(trend.seriesByType[secondaryType])}.`;
+		return `${primaryText} ${secondaryText}`;
+	}
+
+	function buildLineChart(weeks, series) {
 		const width = 280;
-		const height = 140;
-		const bottomAxis = 14;
+		const height = 112;
+		const bottomAxis = 16;
 		const plotHeight = height - bottomAxis;
-		const colCount = days.length;
-		const gap = 6;
-		const colWidth = (width - gap * (colCount + 1)) / colCount;
+		const colCount = weeks.length;
+		const xStep = colCount > 1 ? width / (colCount - 1) : width;
 
-		const dayTotals = days.map((_, i) => sum(entries.map((e) => e.daily[i])));
-		const maxTotal = Math.max(1, ...dayTotals);
+		const allValues = series.flatMap((s) => s.values);
+		const maxVal = Math.max(1, ...allValues);
 
 		const svgNs = 'http://www.w3.org/2000/svg';
 		const svg = document.createElementNS(svgNs, 'svg');
 		svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
 		svg.setAttribute('role', 'img');
-		const totalMistakes = sum(dayTotals);
-		svg.setAttribute('aria-label', `Stacked bar chart of ${totalMistakes} mistakes across the last ${colCount} days.`);
+		svg.setAttribute('aria-label', 'Line chart of mistakes per week');
 
-		days.forEach((day, colIndex) => {
-			const x = gap + colIndex * (colWidth + gap);
-			let y = height - bottomAxis;
+		function pointFor(value, index) {
+			return [index * xStep, plotHeight - (value / maxVal) * plotHeight];
+		}
 
-			entries.forEach((entryData, entryIndex) => {
-				const value = entryData.daily[colIndex];
-				if (value <= 0) {
-					return;
-				}
-				const barHeight = (value / maxTotal) * plotHeight;
-				y -= barHeight;
-				const rect = document.createElementNS(svgNs, 'rect');
-				rect.setAttribute('x', String(x));
-				rect.setAttribute('y', String(y));
-				rect.setAttribute('width', String(colWidth));
-				rect.setAttribute('height', String(barHeight));
-				rect.setAttribute('rx', '1.5');
-				rect.setAttribute('class', 'cc-color-' + (entryIndex % COLOR_COUNT));
-				const title = document.createElementNS(svgNs, 'title');
-				title.textContent = `${entryData.name}: ${value} on ${day.label}`;
-				rect.appendChild(title);
-				svg.appendChild(rect);
-			});
+		series.forEach((s, si) => {
+			const points = s.values.map((v, i) => pointFor(v, i));
+			const line = document.createElementNS(svgNs, 'polyline');
+			line.setAttribute('points', points.map((p) => p.join(',')).join(' '));
+			line.setAttribute('class', 'cc-line ' + (si === 0 ? 'cc-line-primary' : 'cc-line-secondary'));
+			svg.appendChild(line);
 
+			if (si === 0) {
+				const [lx, ly] = points[points.length - 1];
+				const dot = document.createElementNS(svgNs, 'circle');
+				dot.setAttribute('cx', String(lx));
+				dot.setAttribute('cy', String(ly));
+				dot.setAttribute('r', '3.5');
+				dot.setAttribute('class', 'cc-line-dot');
+				svg.appendChild(dot);
+			}
+		});
+
+		weeks.forEach((week, i) => {
 			const label = document.createElementNS(svgNs, 'text');
-			label.setAttribute('x', String(x + colWidth / 2));
+			const x = i * xStep;
+			const anchor = i === 0 ? 'start' : i === colCount - 1 ? 'end' : 'middle';
+			label.setAttribute('x', String(Math.min(Math.max(x, 0), width)));
 			label.setAttribute('y', String(height - 2));
-			label.setAttribute('text-anchor', 'middle');
-			label.setAttribute('class', 'cc-day-label');
-			label.textContent = day.label;
+			label.setAttribute('text-anchor', anchor);
+			label.setAttribute('class', 'cc-week-label');
+			label.textContent = week.label;
 			svg.appendChild(label);
 		});
 
 		return svg;
 	}
 
-	function buildInsight(entries, totalCurrent) {
-		if (totalCurrent === 0) {
-			return 'No mistakes logged in the last 7 days. Keep it up, or start coding to see your stats here.';
-		}
-
-		const withPriorData = entries.filter((e) => e.previousTotal > 0);
-		const improving = withPriorData
-			.map((e) => ({ ...e, delta: e.total - e.previousTotal }))
-			.filter((e) => e.delta < 0)
-			.sort((a, b) => a.delta - b.delta)[0];
-		if (improving) {
-			return `${improving.name} is down ${Math.abs(improving.delta)} from last week, now at ${improving.total}.`;
-		}
-
-		const worsening = withPriorData
-			.map((e) => ({ ...e, delta: e.total - e.previousTotal }))
-			.filter((e) => e.delta > 0)
-			.sort((a, b) => b.delta - a.delta)[0];
-		if (worsening) {
-			return `${worsening.name} is up ${worsening.delta} from last week, now at ${worsening.total} — worth a look.`;
-		}
-
-		const top = [...entries].sort((a, b) => b.total - a.total)[0];
-		const noun = state.language === 'All' ? 'source of mistakes' : 'mistake type';
-		return `${top.name} is your most common ${noun} this week, with ${top.total}.`;
+	function buildGauge(seen, threshold) {
+		const wrap = el('div', 'cc-gauge');
+		const track = el('div', 'cc-gauge-track');
+		const ratio = threshold > 0 ? seen / threshold : 0;
+		const pastThreshold = ratio >= 1;
+		const fill = el('div', 'cc-gauge-fill' + (pastThreshold ? ' cc-gauge-full' : ''));
+		fill.style.width = Math.max(0, Math.min(1, ratio)) * 100 + '%';
+		track.appendChild(fill);
+		wrap.appendChild(track);
+		const label = pastThreshold
+			? `Seen ${seen} times in ${state.muteWindowMinutes} min`
+			: `Seen ${seen} of ${threshold} in ${state.muteWindowMinutes} min`;
+		wrap.appendChild(el('span', 'cc-gauge-label', label));
+		return wrap;
 	}
 
-	function render() {
-		app.innerHTML = '';
-		const payload = state.payload;
-		if (!payload) {
-			app.appendChild(el('p', 'cc-loading', 'Loading stats…'));
-			return;
-		}
-
-		if (payload.languages.length === 0) {
-			app.appendChild(el('p', 'cc-empty', "Code Coach hasn't logged any mistakes yet. Start coding — we'll track patterns here."));
-			return;
-		}
-
-		const header = el('div', 'cc-header');
-		header.appendChild(el('span', 'cc-title', 'Code Coach'));
-		header.appendChild(el('span', 'cc-range', `Last 7 days · ${payload.rangeLabel}`));
-		app.appendChild(header);
-
+	function buildLanguageFilter() {
 		const seg = el('div', 'cc-seg');
 		seg.setAttribute('role', 'group');
 		seg.setAttribute('aria-label', 'Language filter');
-		['All', ...payload.languages].forEach((lang) => {
+		[ALL_LANGUAGES, ...state.languages].forEach((lang) => {
 			const button = document.createElement('button');
-			button.textContent = lang === 'All' ? 'All' : (payload.languageLabels[lang] || lang);
+			button.textContent = lang === ALL_LANGUAGES ? ALL_LANGUAGES : state.languageLabels[lang] || lang;
 			button.className = lang === state.language ? 'on' : '';
 			button.setAttribute('aria-pressed', String(lang === state.language));
 			button.addEventListener('click', () => {
+				if (lang === state.language) {
+					return;
+				}
 				state.language = lang;
 				render();
 			});
 			seg.appendChild(button);
 		});
-		app.appendChild(seg);
+		return seg;
+	}
 
-		const entries = currentEntries(payload);
-		const totalCurrent = state.language === 'All' ? payload.totalCurrent : (payload.byLanguage[state.language]?.total ?? 0);
-		const totalPrevious = state.language === 'All' ? payload.totalPrevious : (payload.byLanguage[state.language]?.previousTotal ?? 0);
-		const uniqueFiles = state.language === 'All' ? payload.uniqueFiles : (payload.byLanguage[state.language]?.uniqueFiles ?? 0);
-		const delta = totalCurrent - totalPrevious;
+	function buildKindList() {
+		const card = el('div', 'cc-card');
+		card.appendChild(el('div', 'cc-eyebrow', 'By kind · this week'));
+		const entries = currentKindEntries();
+		if (entries.length === 0) {
+			card.appendChild(el('p', 'cc-empty', 'No mistakes logged yet this week.'));
+			return card;
+		}
+		entries.forEach((entry, index) => {
+			const muted = isMutedEntry(entry.language, entry.errorType);
 
-		const metrics = el('div', 'cc-metrics');
-		const totalCard = el('div', 'cc-card');
-		totalCard.appendChild(el('div', 'cc-label', 'Mistakes'));
-		totalCard.appendChild(el('div', 'cc-num', String(totalCurrent)));
-		metrics.appendChild(totalCard);
+			const block = el('div', 'cc-row-block' + (muted ? ' cc-row-muted' : ''));
 
-		const deltaCard = el('div', 'cc-card');
-		deltaCard.appendChild(el('div', 'cc-label', 'vs last week'));
-		const deltaNum = el('div', 'cc-num ' + deltaClass(delta), formatDelta(delta));
-		deltaCard.appendChild(deltaNum);
-		metrics.appendChild(deltaCard);
+			const top = el('div', 'cc-row-top');
+			top.appendChild(el('span', 'cc-dot cc-color-' + (index % COLOR_COUNT)));
+			top.appendChild(el('span', 'cc-row-name', entry.label));
+			top.appendChild(el('span', 'cc-row-total', String(entry.total)));
+			const delta = formatKindDelta(entry);
+			top.appendChild(el('span', 'cc-row-delta ' + delta.cls, delta.text));
 
-		const filesCard = el('div', 'cc-card');
-		filesCard.appendChild(el('div', 'cc-label', 'Files affected'));
-		filesCard.appendChild(el('div', 'cc-num', String(uniqueFiles)));
-		metrics.appendChild(filesCard);
-		app.appendChild(metrics);
+			const muteBtn = document.createElement('button');
+			muteBtn.className = 'cc-row-mute' + (muted ? ' cc-on' : '');
+			muteBtn.textContent = muted ? 'Unmute' : 'Mute';
+			muteBtn.title = muted
+				? 'Show hints for this mistake again'
+				: "Already know this one? Stop showing its hint.";
+			muteBtn.addEventListener('click', () => {
+				vscode.postMessage({
+					type: muted ? 'unmute' : 'mute',
+					language: entry.language,
+					errorType: entry.errorType,
+				});
+			});
+			top.appendChild(muteBtn);
+			block.appendChild(top);
+
+			const gaugeRow = el('div', 'cc-gauge-row');
+			gaugeRow.appendChild(buildGauge(entry.recentCount, state.muteThreshold));
+			if (muted) {
+				gaugeRow.appendChild(el('span', 'cc-muted-badge', 'Muted'));
+			}
+			block.appendChild(gaugeRow);
+
+			card.appendChild(block);
+		});
+		return card;
+	}
+
+	function buildSettings() {
+		const card = el('div', 'cc-card');
+		card.appendChild(el('div', 'cc-eyebrow', 'Coaching settings'));
+
+		const sliderRow = el('div', 'cc-settings-row');
+		const label = el('div', 'cc-settings-label');
+		label.appendChild(document.createTextNode('Mute a repeated hint after '));
+		const strong = el('span', 'cc-hl-primary', String(state.muteThreshold));
+		label.appendChild(strong);
+		label.appendChild(document.createTextNode(' hits'));
+		sliderRow.appendChild(label);
+
+		const slider = document.createElement('input');
+		slider.type = 'range';
+		slider.min = '5';
+		slider.max = '50';
+		slider.step = '1';
+		slider.value = String(state.muteThreshold);
+		slider.className = 'cc-slider';
+		slider.setAttribute('aria-label', 'Mute a repeated hint after this many hits');
+		const updateFill = () => {
+			const pct = ((Number(slider.value) - Number(slider.min)) / (Number(slider.max) - Number(slider.min))) * 100;
+			slider.style.setProperty('--cc-fill', pct + '%');
+		};
+		updateFill();
+		slider.addEventListener('input', () => {
+			strong.textContent = slider.value;
+			updateFill();
+		});
+		slider.addEventListener('change', () => {
+			state.muteThreshold = Number(slider.value);
+			vscode.postMessage({ type: 'updateThreshold', value: state.muteThreshold });
+			render();
+		});
+		sliderRow.appendChild(slider);
+		card.appendChild(sliderRow);
+
+		const windowRow = el('div', 'cc-window-row');
+		windowRow.appendChild(el('span', undefined, 'within'));
+		const seg = el('div', 'cc-seg');
+		seg.setAttribute('role', 'group');
+		seg.setAttribute('aria-label', 'Time window for the mute suggestion');
+		[2, 5, 10].forEach((minutes) => {
+			const button = document.createElement('button');
+			button.textContent = minutes + ' min';
+			button.className = minutes === state.muteWindowMinutes ? 'on' : '';
+			button.setAttribute('aria-pressed', String(minutes === state.muteWindowMinutes));
+			button.addEventListener('click', () => {
+				if (minutes === state.muteWindowMinutes) {
+					return;
+				}
+				state.muteWindowMinutes = minutes;
+				vscode.postMessage({ type: 'updateWindow', value: minutes });
+				render();
+			});
+			seg.appendChild(button);
+		});
+		windowRow.appendChild(seg);
+		card.appendChild(windowRow);
+
+		return card;
+	}
+
+	function render() {
+		app.innerHTML = '';
+
+		if (!currentTrend()) {
+			app.appendChild(el('p', 'cc-loading', 'Loading stats…'));
+			return;
+		}
+
+		const header = el('div');
+		header.appendChild(el('div', 'cc-eyebrow', 'Code Coach'));
+		header.appendChild(el('h1', 'cc-h1', 'Your week'));
+		app.appendChild(header);
+
+		app.appendChild(buildLanguageFilter());
+
+		const trend = currentTrend();
+		const entries = currentKindEntries();
+
+		if (entries.length === 0) {
+			app.appendChild(
+				el('p', 'cc-empty', "Code Coach hasn't logged any mistakes yet. Start coding — we'll track patterns here.")
+			);
+			app.appendChild(buildSettings());
+			return;
+		}
 
 		const chartCard = el('div', 'cc-card');
-		const chartHead = el('div', 'cc-chart-head');
-		chartHead.appendChild(el('span', 'cc-chart-title', 'Mistakes per day'));
-		const dayTotals = payload.days.map((_, i) => sum(entries.map((e) => e.daily[i])));
-		const maxDay = Math.max(...dayTotals);
-		const busiestIndex = dayTotals.indexOf(maxDay);
-		if (maxDay > 0) {
-			chartHead.appendChild(el('span', 'cc-busiest', `Busiest: ${payload.days[busiestIndex].label} · ${maxDay}`));
-		}
+		const chartHead = el('div', 'cc-card-head');
+		chartHead.appendChild(el('span', 'cc-card-title', 'Mistakes per week'));
+		chartHead.appendChild(el('span', 'cc-card-meta', trend.weeks.length + ' weeks'));
 		chartCard.appendChild(chartHead);
+
 		const chartWrap = el('div', 'cc-chart');
-		chartWrap.appendChild(buildChart(payload.days, entries));
+		const series = trend.topTypes.map((type) => ({ values: trend.seriesByType[type] }));
+		chartWrap.appendChild(buildLineChart(trend.weeks, series));
 		chartCard.appendChild(chartWrap);
+		chartCard.appendChild(el('p', 'cc-insight', buildInsight(trend)));
 		app.appendChild(chartCard);
 
-		const listCard = el('div', 'cc-card');
-		listCard.appendChild(el('div', 'cc-list-title', state.language === 'All' ? 'By language' : 'By mistake type'));
-		const sorted = [...entries].sort((a, b) => b.total - a.total);
-		sorted.forEach((entry) => {
-			const originalIndex = entries.indexOf(entry);
-			const row = el('div', 'cc-row');
-			const dot = el('span', 'cc-dot cc-color-' + (originalIndex % COLOR_COUNT));
-			row.appendChild(dot);
-			row.appendChild(el('span', 'cc-row-name', entry.name));
-			row.appendChild(el('span', 'cc-row-total', String(entry.total)));
-			const rowDelta = entry.total - entry.previousTotal;
-			row.appendChild(el('span', 'cc-row-delta ' + deltaClass(rowDelta), formatDelta(rowDelta)));
-			listCard.appendChild(row);
-		});
-		app.appendChild(listCard);
-
-		const insight = el('div', 'cc-insight');
-		insight.appendChild(el('span', undefined, buildInsight(entries, totalCurrent)));
-		app.appendChild(insight);
+		app.appendChild(buildKindList());
+		app.appendChild(buildSettings());
 	}
 
 	render();

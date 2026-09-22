@@ -79,6 +79,19 @@
           "type": "string",
           "default": "llama3.2",
           "description": "Model name to request from the local model server, used when codeCoach.hintProvider is \"local\"."
+        },
+        "codeCoach.muteSuggestionThreshold": {
+          "type": "number",
+          "default": 20,
+          "minimum": 5,
+          "maximum": 50,
+          "description": "How many times a mistake type has to be seen within codeCoach.muteSuggestionWindowMinutes before Code Coach offers to mute its hint."
+        },
+        "codeCoach.muteSuggestionWindowMinutes": {
+          "type": "number",
+          "enum": [2, 5, 10],
+          "default": 5,
+          "description": "The time window, in minutes, that codeCoach.muteSuggestionThreshold hits are counted within."
         }
       }
     },

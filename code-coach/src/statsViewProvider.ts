@@ -1,8 +1,24 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { readErrorEvents, getLogFilePath } from './errorLogger';
-import { computeStatsPayload } from './stats';
+import { readErrorEvents, getLogFilePath, countOccurrencesWithinWindow } from './errorLogger';
+import { computeWeeklyTrend, formatLanguageLabel, WeeklyTrendPayload } from './stats';
+import { muteType, unmuteType, listMutedTypes } from './muteStore';
+import { clearHintsForType } from './hintDecorations';
+import { getKindLabel } from './hintLabels';
+
+const WEEK_COUNT = 6;
+const KIND_LIST_SIZE = 5;
+const ALL_LANGUAGES = 'All';
+
+interface KindEntry {
+	errorType: string;
+	language: string;
+	label: string;
+	total: number;
+	previousTotal: number;
+	recentCount: number;
+}
 
 const WATCH_DEBOUNCE_MS = 500;
 
@@ -36,6 +52,21 @@ export class StatsViewProvider implements vscode.WebviewViewProvider, vscode.Dis
 		webviewView.webview.onDidReceiveMessage((message) => {
 			if (message?.type === 'ready') {
 				this.postStats();
+			} else if (message?.type === 'mute' && message.language && message.errorType) {
+				muteType(message.language, message.errorType);
+				clearHintsForType(message.language, message.errorType);
+				this.postStats();
+			} else if (message?.type === 'unmute' && message.language && message.errorType) {
+				unmuteType(message.language, message.errorType);
+				this.postStats();
+			} else if (message?.type === 'updateThreshold' && typeof message.value === 'number') {
+				vscode.workspace
+					.getConfiguration('codeCoach')
+					.update('muteSuggestionThreshold', message.value, vscode.ConfigurationTarget.Global);
+			} else if (message?.type === 'updateWindow' && typeof message.value === 'number') {
+				vscode.workspace
+					.getConfiguration('codeCoach')
+					.update('muteSuggestionWindowMinutes', message.value, vscode.ConfigurationTarget.Global);
 			}
 		});
 
@@ -61,11 +92,63 @@ export class StatsViewProvider implements vscode.WebviewViewProvider, vscode.Dis
 		}
 		try {
 			const events = readErrorEvents();
-			const payload = computeStatsPayload(events, new Date());
-			this.view.webview.postMessage({ type: 'stats', payload });
+			const now = new Date();
+			const config = vscode.workspace.getConfiguration('codeCoach');
+			const muteThreshold = config.get<number>('muteSuggestionThreshold', 20);
+			const muteWindowMinutes = config.get<number>('muteSuggestionWindowMinutes', 5);
+
+			const languages = [...new Set(events.map((e) => e.language))].sort();
+			const languageLabels: Record<string, string> = {};
+			for (const language of languages) {
+				languageLabels[language] = formatLanguageLabel(language);
+			}
+
+			const trendByLanguage: Record<string, WeeklyTrendPayload> = {
+				[ALL_LANGUAGES]: computeWeeklyTrend(events, now, WEEK_COUNT),
+			};
+			const kindEntriesByLanguage: Record<string, KindEntry[]> = {
+				[ALL_LANGUAGES]: this.buildKindEntries(trendByLanguage[ALL_LANGUAGES], muteWindowMinutes, now),
+			};
+			for (const language of languages) {
+				const trend = computeWeeklyTrend(events, now, WEEK_COUNT, language);
+				trendByLanguage[language] = trend;
+				kindEntriesByLanguage[language] = this.buildKindEntries(trend, muteWindowMinutes, now);
+			}
+
+			const mutedTypes = listMutedTypes().map((m) => `${m.language}::${m.errorType}`);
+			this.view.webview.postMessage({
+				type: 'stats',
+				languages,
+				languageLabels,
+				trendByLanguage,
+				kindEntriesByLanguage,
+				muteThreshold,
+				muteWindowMinutes,
+				mutedTypes,
+			});
 		} catch (error) {
 			this.view.webview.postMessage({ type: 'error', message: String(error) });
 		}
+	}
+
+	private buildKindEntries(trend: WeeklyTrendPayload, muteWindowMinutes: number, now: Date): KindEntry[] {
+		const thisWeekIndex = WEEK_COUNT - 1;
+		const previousWeekIndex = WEEK_COUNT - 2;
+		return Object.keys(trend.seriesByType)
+			.sort((a, b) => trend.seriesByType[b][thisWeekIndex] - trend.seriesByType[a][thisWeekIndex])
+			.slice(0, KIND_LIST_SIZE)
+			.map((errorType) => {
+				const series = trend.seriesByType[errorType];
+				const language = trend.languageByType[errorType] ?? 'unknown';
+				return {
+					errorType,
+					language,
+					label: getKindLabel(errorType, language),
+					total: series[thisWeekIndex],
+					previousTotal: series[previousWeekIndex] ?? 0,
+					recentCount: countOccurrencesWithinWindow(language, errorType, muteWindowMinutes, now),
+				};
+			});
 	}
 
 	private startWatching(): void {

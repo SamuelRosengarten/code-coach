@@ -18,6 +18,21 @@ export function getLogFilePath(): string {
 	return path.join(getStorageDir(), LOG_FILE_NAME);
 }
 
+export function countOccurrences(language: string, errorType: string): number {
+	return readErrorEvents().filter((e) => e.language === language && e.errorType === errorType).length;
+}
+
+export function countOccurrencesWithinWindow(language: string, errorType: string, windowMinutes: number, now: Date = new Date()): number {
+	const cutoff = now.getTime() - windowMinutes * 60 * 1000;
+	return readErrorEvents().filter((e) => {
+		if (e.language !== language || e.errorType !== errorType) {
+			return false;
+		}
+		const eventTime = new Date(e.timestamp).getTime();
+		return !Number.isNaN(eventTime) && eventTime >= cutoff;
+	}).length;
+}
+
 export function readErrorEvents(): ErrorEvent[] {
 	try {
 		const content = fs.readFileSync(getLogFilePath(), 'utf-8');

@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { computeStatsPayload, formatLanguageLabel } from '../stats';
+import { computeStatsPayload, computeWeeklyTrend, formatLanguageLabel } from '../stats';
 import { ErrorEvent } from '../types';
 
 function makeEvent(daysAgo: number, overrides: Partial<ErrorEvent> = {}): ErrorEvent {
@@ -86,12 +86,80 @@ suite('Stats Test Suite', () => {
 		assert.strictEqual(payload.byLanguage.java.uniqueFiles, 1);
 	});
 
+	test('allTimeTotal keeps counting an error type even outside the 14-day window', () => {
+		const events = [
+			makeEvent(0, { errorType: 'invalid_assignment' }),
+			makeEvent(8, { errorType: 'invalid_assignment' }),
+			makeEvent(20, { errorType: 'invalid_assignment' }),
+			makeEvent(100, { errorType: 'invalid_assignment' }),
+		];
+		const payload = computeStatsPayload(events, NOW);
+		assert.strictEqual(payload.byLanguageAndType.dart.invalid_assignment.total, 1);
+		assert.strictEqual(payload.byLanguageAndType.dart.invalid_assignment.previousTotal, 1);
+		assert.strictEqual(payload.byLanguageAndType.dart.invalid_assignment.allTimeTotal, 4);
+	});
+
 	test('places each event on the correct day within the window', () => {
 		const events = [makeEvent(0), makeEvent(6)];
 		const payload = computeStatsPayload(events, NOW);
 		assert.strictEqual(payload.byLanguage.dart.daily[6], 1);
 		assert.strictEqual(payload.byLanguage.dart.daily[0], 1);
 		assert.strictEqual(sum(payload.byLanguage.dart.daily), 2);
+	});
+});
+
+suite('Weekly Trend Test Suite', () => {
+	test('produces 6 weeks with the last one labeled "this"', () => {
+		const trend = computeWeeklyTrend([], NOW);
+		assert.strictEqual(trend.weeks.length, 6);
+		assert.deepStrictEqual(
+			trend.weeks.map((w) => w.label),
+			['W1', 'W2', 'W3', 'W4', 'W5', 'this']
+		);
+	});
+
+	test('buckets events into the correct week going backwards from now', () => {
+		const events = [
+			makeEvent(0, { errorType: 'null_safety' }),
+			makeEvent(7, { errorType: 'null_safety' }),
+			makeEvent(35, { errorType: 'null_safety' }),
+		];
+		const trend = computeWeeklyTrend(events, NOW);
+		assert.strictEqual(trend.seriesByType.null_safety[5], 1);
+		assert.strictEqual(trend.seriesByType.null_safety[4], 1);
+		assert.strictEqual(trend.seriesByType.null_safety[0], 1);
+	});
+
+	test('drops events older than the tracked window', () => {
+		const events = [makeEvent(0, { errorType: 'null_safety' }), makeEvent(200, { errorType: 'null_safety' })];
+		const trend = computeWeeklyTrend(events, NOW);
+		assert.strictEqual(sum(trend.seriesByType.null_safety), 1);
+	});
+
+	test('topTypes ranks by this-week volume, capped at 2', () => {
+		const events = [
+			makeEvent(0, { errorType: 'a' }),
+			makeEvent(0, { errorType: 'a' }),
+			makeEvent(0, { errorType: 'b' }),
+			makeEvent(0, { errorType: 'c' }),
+		];
+		const trend = computeWeeklyTrend(events, NOW);
+		assert.deepStrictEqual(trend.topTypes, ['a', 'b']);
+	});
+
+	test('records the language associated with each error type', () => {
+		const events = [makeEvent(0, { errorType: 'invalid_assignment', language: 'dart' })];
+		const trend = computeWeeklyTrend(events, NOW);
+		assert.strictEqual(trend.languageByType.invalid_assignment, 'dart');
+	});
+
+	test('filters to a single language when one is given', () => {
+		const events = [
+			makeEvent(0, { errorType: 'invalid_assignment', language: 'dart' }),
+			makeEvent(0, { errorType: '2345', language: 'typescript' }),
+		];
+		const trend = computeWeeklyTrend(events, NOW, 6, 'dart');
+		assert.deepStrictEqual(Object.keys(trend.seriesByType), ['invalid_assignment']);
 	});
 });
 

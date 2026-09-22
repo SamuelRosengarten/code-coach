@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
-import { appendErrorEvent } from './errorLogger';
+import { appendErrorEvent, countOccurrencesWithinWindow } from './errorLogger';
 import { ErrorEvent } from './types';
 import { selectNewDiagnostics } from './diagnosticsFilter';
 import { getCoachingHint } from './rewordHint';
-import { showHint, clearHint } from './hintDecorations';
-import { isMuted } from './muteStore';
+import { showHint, clearHint, clearHintsForType } from './hintDecorations';
+import { isMuted, muteType } from './muteStore';
+import { hasBeenSuggested, markSuggested } from './muteSuggestions';
 
 const DEBOUNCE_MS = 1200;
 const loggedDiagnostics = new Map<string, Set<string>>();
@@ -81,6 +82,7 @@ async function processStableDiagnostics(uri: vscode.Uri, context: vscode.Extensi
 			hintTasks.push(
 				getCoachingHint(context, selection.errorType, language, selection.message).then((hint) => {
 					showHint(uri, selection.line, hint, selection.errorType, language);
+					maybeSuggestMute(language, selection.errorType, hint);
 				})
 			);
 		}
@@ -88,4 +90,33 @@ async function processStableDiagnostics(uri: vscode.Uri, context: vscode.Extensi
 
 	loggedDiagnostics.set(uriKey, updatedLogged);
 	await Promise.all(hintTasks);
+}
+
+function maybeSuggestMute(language: string, errorType: string, hintText: string): void {
+	if (isMuted(language, errorType) || hasBeenSuggested(language, errorType)) {
+		return;
+	}
+
+	const config = vscode.workspace.getConfiguration('codeCoach');
+	const threshold = config.get<number>('muteSuggestionThreshold', 20);
+	const windowMinutes = config.get<number>('muteSuggestionWindowMinutes', 5);
+	const seenCount = countOccurrencesWithinWindow(language, errorType, windowMinutes);
+	if (seenCount < threshold) {
+		return;
+	}
+
+	markSuggested(language, errorType);
+
+	vscode.window
+		.showInformationMessage(
+			`Code Coach noticed this hint ${seenCount} times in the last ${windowMinutes} min: "${hintText}". Mute it?`,
+			'Mute',
+			'Keep Showing'
+		)
+		.then((choice) => {
+			if (choice === 'Mute') {
+				muteType(language, errorType);
+				clearHintsForType(language, errorType);
+			}
+		});
 }

@@ -2,6 +2,8 @@ import { ErrorEvent } from './types';
 
 const DAY_COUNT = 7;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const WEEK_COUNT = 6;
+const MS_PER_WEEK = 7 * MS_PER_DAY;
 
 const LANGUAGE_LABELS: Record<string, string> = {
 	dart: 'Dart',
@@ -37,6 +39,7 @@ export interface TypeStats {
 	daily: number[];
 	total: number;
 	previousTotal: number;
+	allTimeTotal: number;
 }
 
 export interface StatsPayload {
@@ -49,6 +52,61 @@ export interface StatsPayload {
 	totalCurrent: number;
 	totalPrevious: number;
 	uniqueFiles: number;
+}
+
+export interface WeekInfo {
+	key: string;
+	label: string;
+}
+
+export interface WeeklyTrendPayload {
+	weeks: WeekInfo[];
+	seriesByType: Record<string, number[]>;
+	languageByType: Record<string, string>;
+	topTypes: string[];
+}
+
+export function computeWeeklyTrend(
+	events: readonly ErrorEvent[],
+	now: Date = new Date(),
+	weekCount: number = WEEK_COUNT,
+	language?: string
+): WeeklyTrendPayload {
+	const weeks: WeekInfo[] = [];
+	for (let i = 0; i < weekCount; i++) {
+		weeks.push({ key: `w${i}`, label: i === weekCount - 1 ? 'this' : `W${i + 1}` });
+	}
+
+	const seriesByType: Record<string, number[]> = {};
+	const languageByType: Record<string, string> = {};
+
+	for (const event of events) {
+		if (language !== undefined && event.language !== language) {
+			continue;
+		}
+		const eventDate = new Date(event.timestamp);
+		if (Number.isNaN(eventDate.getTime())) {
+			continue;
+		}
+		const ageMs = now.getTime() - eventDate.getTime();
+		if (ageMs < 0) {
+			continue;
+		}
+		const weeksAgo = Math.floor(ageMs / MS_PER_WEEK);
+		if (weeksAgo >= weekCount) {
+			continue;
+		}
+		const index = weekCount - 1 - weeksAgo;
+		const series = seriesByType[event.errorType] ?? (seriesByType[event.errorType] = new Array(weekCount).fill(0));
+		series[index]++;
+		languageByType[event.errorType] = event.language;
+	}
+
+	const topTypes = Object.keys(seriesByType)
+		.sort((a, b) => seriesByType[b][weekCount - 1] - seriesByType[a][weekCount - 1])
+		.slice(0, 2);
+
+	return { weeks, seriesByType, languageByType, topTypes };
 }
 
 export function formatLanguageLabel(language: string): string {
@@ -92,7 +150,7 @@ function emptyLanguageStats(): LanguageStats {
 }
 
 function emptyTypeStats(): TypeStats {
-	return { daily: new Array(DAY_COUNT).fill(0), total: 0, previousTotal: 0 };
+	return { daily: new Array(DAY_COUNT).fill(0), total: 0, previousTotal: 0, allTimeTotal: 0 };
 }
 
 export function computeStatsPayload(events: readonly ErrorEvent[], now: Date = new Date()): StatsPayload {
@@ -130,6 +188,7 @@ export function computeStatsPayload(events: readonly ErrorEvent[], now: Date = n
 		const languageStats = byLanguage[event.language];
 		const typeStatsByLanguage = byLanguageAndType[event.language];
 		const typeStats = typeStatsByLanguage[event.errorType] ?? (typeStatsByLanguage[event.errorType] = emptyTypeStats());
+		typeStats.allTimeTotal++;
 
 		if (dayIndex !== undefined) {
 			languageStats.daily[dayIndex]++;

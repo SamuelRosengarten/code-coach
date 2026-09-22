@@ -7,4 +7,5 @@ class Greeter {
 
 void Main() {
   String patate = 1;
+  Greeter().greet(name: name);
 }
