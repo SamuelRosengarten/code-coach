@@ -52,10 +52,48 @@ Matches the host editor so hints feel native rather than like a separate tool:
 
 ## How it works
 
-1. **Diagnostics listener** — subscribes to `vscode.languages.onDidChangeDiagnostics` and logs every diagnostic to the console, confirming the extension is actually seeing compiler/linter errors as they appear (`src/diagnosticsHandler.ts`).
-2. **Friendly hints** — for one coached error type (currently TypeScript's `TS2304`, "Cannot find name"), a plain-language explanation is shown as a hover in place of the raw compiler message (`src/hints.ts`, `src/hoverProvider.ts`).
-3. **Repeat counting & mute logic** — occurrences of that error type within a rolling time window are tracked via `ExtensionContext.workspaceState`; once the count exceeds a threshold, the hint is suppressed until the window resets, so coaching doesn't nag (`src/muteTracker.ts`).
-4. **Progress log** — every occurrence (shown or muted) is appended as one JSON line to a log file in the extension's global storage folder, so the planned dashboard can show progress across sessions and workspaces (`src/logger.ts`, `src/storage.ts`, `src/schema.ts`).
+`src/extension.ts` is the entry point — the only file VS Code calls into directly. On startup (`activate()`) it sets up two subscriptions and hands the real work off to the other modules:
+
+```
+VS Code raises a diagnostic (a compiler/linter error)
+            │
+            ▼
+ onDidChangeDiagnostics fires  (wired up in extension.ts)
+            │
+            ▼
+ processDiagnostics()          (src/diagnosticsHandler.ts)
+   ├─ logs it to the console
+   ├─ is it the coached error type (TS2304)?  → getHint()      (src/hints.ts)
+   ├─ has it repeated too often recently?     → MuteTracker    (src/muteTracker.ts)
+   └─ appends one JSON line to the log file   → appendErrorEvent (src/logger.ts)
+                                                  using the path from  (src/storage.ts)
+                                                  and the shape from   (src/schema.ts)
+
+ Separately, whenever the user hovers over an error:
+            │
+            ▼
+ registerHoverProvider callback  (wired up in extension.ts)
+            │
+            ▼
+ buildHoverMessage()             (src/hoverProvider.ts)
+   └─ same getHint() + MuteTracker check as above, so a muted
+      error type just falls back to VS Code's normal hover.
+```
+
+**Module responsibilities**
+
+| File | Responsibility |
+| --- | --- |
+| `src/extension.ts` | Entry point. Wires the modules below into VS Code's APIs; contains almost no logic of its own. |
+| `src/hints.ts` | Knows about the one coached error (`TS2304`) and its friendly explanation. |
+| `src/diagnosticsHandler.ts` | Handles one batch of diagnostics: console log, mute check, and log-file write. |
+| `src/hoverProvider.ts` | Picks the hover text to show at a given cursor position. |
+| `src/muteTracker.ts` | Counts repeats of an error type within a rolling time window and decides when to mute it. |
+| `src/logger.ts` | Appends one JSON line per error event to the log file. |
+| `src/storage.ts` | Resolves (and creates) the on-disk folder the log file lives in. |
+| `src/schema.ts` | Defines the shape of a logged event (`ErrorEvent`) and validates it. |
+
+Everything except `extension.ts` is plain TypeScript with no dependency on the `vscode` module, which is what lets it be unit tested directly (see `test/`) without spinning up an editor.
 
 ### Settings
 

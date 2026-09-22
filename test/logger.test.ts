@@ -26,7 +26,7 @@ test('getLogFilePath joins the storage folder and log file name', () => {
   assert.equal(getLogFilePath('/tmp/code-coach'), path.join('/tmp/code-coach', LOG_FILE_NAME));
 });
 
-test('appendErrorEvent creates the file on first write (issue #15)', () => {
+test('appendErrorEvent creates the file on first write', () => {
   const dir = makeTempDir();
   const logFilePath = getLogFilePath(dir);
   assert.equal(fs.existsSync(logFilePath), false);
@@ -37,7 +37,7 @@ test('appendErrorEvent creates the file on first write (issue #15)', () => {
   assert.equal(fs.existsSync(logFilePath), true);
 });
 
-test('manual verification of the log (issue #18): trigger the target error a few times, then confirm every line parses as valid JSON matching the schema', () => {
+test('trigger the target error a few times, then confirm every line parses as valid JSON matching the schema', () => {
   const dir = makeTempDir();
   const logFilePath = getLogFilePath(dir);
 
@@ -63,7 +63,7 @@ test('manual verification of the log (issue #18): trigger the target error a few
   );
 });
 
-test('appendErrorEvent survives write failures without throwing (issue #17)', () => {
+test('appendErrorEvent survives write failures without throwing', () => {
   const dir = makeTempDir();
   // Point the "log file" at a directory instead of a file so the write fails.
   const badPath = path.join(dir, 'not-a-file');
