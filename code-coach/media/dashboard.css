@@ -1,0 +1,366 @@
+:root {
+	--cc-bg: #faf7f1;
+	--cc-bg-raised: #ffffff;
+	--cc-border: #e4ddd0;
+	--cc-text: #2a2620;
+	--cc-text-dim: #6e6858;
+	--cc-text-faint: #a39c8a;
+	--cc-gold: #a97d3d;
+	--cc-gold-bg: #a97d3d;
+	--cc-gold-contrast: #fffaf1;
+	--cc-red: #ab4a3a;
+	--cc-serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', Palatino, serif;
+	--cc-caps: var(--vscode-font-family, sans-serif);
+}
+
+body {
+	margin: 0;
+	padding: 14px;
+	color: var(--cc-text);
+	font-family: var(--cc-serif);
+	font-size: var(--vscode-font-size, 13px);
+	background: var(--cc-bg);
+}
+
+.cc-app {
+	display: flex;
+	flex-direction: column;
+	gap: 18px;
+}
+
+.cc-loading,
+.cc-empty {
+	color: var(--cc-text-dim);
+	text-align: center;
+	padding: 24px 8px;
+	font-style: italic;
+}
+
+.cc-eyebrow {
+	font-family: var(--cc-caps);
+	font-size: 0.7em;
+	letter-spacing: 0.14em;
+	text-transform: uppercase;
+	color: var(--cc-text-faint);
+	margin-bottom: 4px;
+}
+
+.cc-h1 {
+	font-size: 1.7em;
+	font-weight: 400;
+	margin: 0;
+}
+
+.cc-seg {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.cc-seg button {
+	font-family: var(--cc-caps);
+	font-size: 0.85em;
+	padding: 3px 11px;
+	border-radius: 999px;
+	border: 1px solid var(--cc-border);
+	background: var(--cc-bg-raised);
+	color: var(--cc-text-dim);
+	cursor: pointer;
+}
+
+.cc-seg button:hover {
+	border-color: var(--cc-gold);
+	color: var(--cc-text);
+}
+
+.cc-seg button.on {
+	background: var(--cc-gold-bg);
+	color: var(--cc-gold-contrast);
+	border-color: var(--cc-gold-bg);
+}
+
+.cc-card {
+	background: transparent;
+	border-top: 1px solid var(--cc-border);
+	padding-top: 12px;
+}
+
+.cc-card-head {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	margin-bottom: 10px;
+}
+
+.cc-card-title {
+	font-size: 1.05em;
+}
+
+.cc-card-meta {
+	font-family: var(--cc-caps);
+	font-size: 0.78em;
+	color: var(--cc-text-faint);
+}
+
+.cc-chart svg {
+	width: 100%;
+	height: auto;
+	display: block;
+	overflow: visible;
+}
+
+.cc-line {
+	fill: none;
+	stroke-width: 2;
+}
+
+.cc-line-primary {
+	stroke: var(--cc-gold);
+}
+
+.cc-line-secondary {
+	stroke: var(--cc-text-faint);
+	stroke-dasharray: 3 3;
+}
+
+.cc-line-dot {
+	fill: var(--cc-bg);
+	stroke: var(--cc-gold);
+	stroke-width: 2;
+}
+
+.cc-week-label {
+	font-family: var(--cc-caps);
+	font-size: 6.5px;
+	letter-spacing: 0.04em;
+	fill: var(--cc-text-faint);
+}
+
+.cc-insight {
+	font-style: italic;
+	color: var(--cc-text-dim);
+	line-height: 1.55;
+	font-size: 0.92em;
+	margin: 10px 0 0;
+}
+
+.cc-insight .cc-hl-primary {
+	color: var(--cc-gold);
+	font-style: normal;
+}
+
+.cc-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 0 0;
+}
+
+.cc-row-top {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding-top: 8px;
+	border-top: 1px solid var(--cc-border);
+}
+
+.cc-row-block:first-child .cc-row-top {
+	border-top: none;
+	padding-top: 0;
+}
+
+.cc-row-block {
+	padding: 0;
+}
+
+.cc-row-muted {
+	opacity: 0.6;
+}
+
+.cc-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 2px;
+	flex: none;
+}
+
+.cc-row-name {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.cc-row-total {
+	font-variant-numeric: tabular-nums;
+	color: var(--cc-text);
+	width: 22px;
+	text-align: right;
+	flex: none;
+}
+
+.cc-row-delta {
+	font-family: var(--cc-caps);
+	font-size: 0.82em;
+	width: 42px;
+	text-align: right;
+	flex: none;
+	font-variant-numeric: tabular-nums;
+}
+
+.cc-delta-good {
+	color: var(--cc-gold);
+}
+
+.cc-delta-bad {
+	color: var(--cc-red);
+}
+
+.cc-delta-flat,
+.cc-delta-new {
+	color: var(--cc-text-faint);
+}
+
+.cc-row-mute {
+	font-family: var(--cc-caps);
+	font-size: 0.72em;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--cc-text-faint);
+	background: none;
+	border: none;
+	cursor: pointer;
+	flex: none;
+	padding: 0;
+	width: 48px;
+	text-align: right;
+}
+
+.cc-row-mute:hover {
+	color: var(--cc-gold);
+}
+
+.cc-row-mute.cc-on {
+	color: var(--cc-gold);
+}
+
+.cc-gauge-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 0 8px 16px;
+}
+
+.cc-gauge {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex: 1;
+	min-width: 0;
+}
+
+.cc-gauge-track {
+	flex: 1;
+	height: 4px;
+	border-radius: 999px;
+	background: var(--cc-border);
+	overflow: hidden;
+}
+
+.cc-gauge-fill {
+	height: 100%;
+	border-radius: 999px;
+	background: var(--cc-text-faint);
+}
+
+.cc-gauge-fill.cc-gauge-full {
+	background: var(--cc-red);
+}
+
+.cc-gauge-label {
+	font-family: var(--cc-caps);
+	font-size: 0.72em;
+	color: var(--cc-text-faint);
+	white-space: nowrap;
+	flex: none;
+}
+
+.cc-muted-badge {
+	font-family: var(--cc-caps);
+	font-size: 0.72em;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--cc-text-faint);
+	white-space: nowrap;
+	flex: none;
+}
+
+.cc-settings-row {
+	margin-top: 4px;
+}
+
+.cc-settings-label {
+	margin-bottom: 10px;
+}
+
+.cc-settings-label .cc-hl-primary {
+	color: var(--cc-gold);
+}
+
+.cc-slider {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 100%;
+	height: 3px;
+	border-radius: 999px;
+	background: linear-gradient(to right, var(--cc-gold) var(--cc-fill, 50%), var(--cc-border) var(--cc-fill, 50%));
+	outline: none;
+	margin: 8px 0 14px;
+}
+
+.cc-slider::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: var(--cc-bg-raised);
+	border: 2px solid var(--cc-gold);
+	cursor: pointer;
+}
+
+.cc-slider::-moz-range-thumb {
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	background: var(--cc-bg-raised);
+	border: 2px solid var(--cc-gold);
+	cursor: pointer;
+}
+
+.cc-window-row {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-family: var(--cc-caps);
+	font-size: 0.85em;
+	color: var(--cc-text-dim);
+}
+
+.cc-color-0 { background: #a97d3d; fill: #a97d3d; }
+.cc-color-1 { background: #ab4a3a; fill: #ab4a3a; }
+.cc-color-2 { background: #5f7a5e; fill: #5f7a5e; }
+.cc-color-3 { background: #4f7291; fill: #4f7291; }
+.cc-color-4 { background: #7a5f8a; fill: #7a5f8a; }
+.cc-color-5 { background: #8a7a4f; fill: #8a7a4f; }
+.cc-color-6 { background: #6e6858; fill: #6e6858; }
+
+.cc-sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+}

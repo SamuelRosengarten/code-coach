@@ -431,3 +431,6 @@ FodyWeavers.xsd
 # Code Coach build output
 out/
 .vscode-test/
+
+# macOS
+.DS_Store

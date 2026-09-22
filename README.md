@@ -1,17 +1,19 @@
 # Code Coach
 
-A VS Code extension that turns raw compiler/linter errors into gentle, plain-language coaching hints, and tracks a student's progress fixing them over time.
+Code Coach is a VS Code extension that turns coding mistakes into a private coaching loop: it catches errors as you write code, explains them in plain language next to the line, and tracks your progress over time — without sending anything off your machine unless you explicitly opt in.
 
 **Design Reference:** https://claude.ai/design/p/7aec18e6-ff59-4189-a463-b0c7f128f285?file=Code+Coach.dc.html&via=share
 
-## Overview
-The Code Coach design establishes the visual language and user interface for the VS Code extension's coaching system.
+## Repository Structure
 
-## Key Components
-- **Error Hints**: Gentle, contextual hints displayed near errors in the editor
-- **Dashboard/Sidebar Panel**: Visualization of mistakes over time with coaching insights
-- **Session Summary**: End-of-session coaching touchpoint showing progress
-- **Progress Reports**: Visual tracking of improvement across weeks
+This repository currently contains two parallel implementations of the extension, developed independently:
+
+| Path | Contents |
+|---|---|
+| [`src/`](src/) | The original extension: one coached error type (TypeScript's `TS2304`), rule-based hints, mute tracking, and JSONL progress logging. See [How it works](#how-it-works-src) below. |
+| [`code-coach/`](code-coach/) | A fuller extension: inline hints across several languages, a mistake dashboard, optional AI-powered hint rewording, and mute management. See [`code-coach/README.md`](code-coach/README.md) for installation and usage. |
+| [`test-fixtures/`](test-fixtures/) | Small sample projects (currently a Dart project) used to trigger real diagnostics while developing and testing `code-coach/`'s hints. |
+| [`SECURITY.md`](SECURITY.md) | Vulnerability reporting process and a summary of what data Code Coach does/doesn't send off-device. |
 
 ## Design Sections
 
@@ -31,26 +33,25 @@ Matches the host editor so hints feel native rather than like a separate tool:
 
 ### UI Components
 - **Hover hint**: replaces the raw diagnostic message for a coached error type when hovering over it
-- **Inline decoration** *(planned)*: a subtle gutter icon marking lines with an active coaching hint
-- **Dashboard/sidebar panel** *(planned)*: a webview showing mistake-type breakdowns, a file/line heatmap, and weekly progress
+- **Inline decoration**: a subtle gutter icon (or, in `code-coach/`, inline "ghost text") marking lines with an active coaching hint
+- **Dashboard/sidebar panel**: a webview showing mistake-type breakdowns, a file/line heatmap, and weekly progress (implemented in `code-coach/`)
 - **Session summary** *(planned)*: a short end-of-session message summarizing what was fixed
 
 ### Interaction Patterns
-- Hints appear passively (on hover) rather than as interrupting popups
-- An error type that repeats often within a short window is muted automatically so coaching doesn't become nagging (see [Repeat counting & mute logic](#repeat-counting--mute-logic))
+- Hints appear passively (on hover, or as inline text) rather than as interrupting popups
+- An error type that repeats often within a short window is muted automatically, or the user is offered the choice to mute it, so coaching doesn't become nagging
 - Muted errors silently fall back to the editor's normal diagnostic message instead of disappearing entirely
 
-## Coaching Elements
-- Mistake type visualizations
-- File/line heatmap for error concentration
-- Weekly improvement graphs
-- Friendly end-of-session summaries
+## Getting Started
 
-## Export & Sharing
-- One-page exportable report format for sharing with tutors/mentors
-- Dashboard view for ongoing tracking
+For the fuller `code-coach/` extension, see [`code-coach/README.md`](code-coach/README.md) for:
+- What the extension does (inline hints, mistake dashboard, mute management)
+- How to enable optional AI-powered hint rewording, either via the Claude API (bring your own key) or a free local model (Ollama) — no network calls happen unless you turn one of these on
+- Full list of settings and commands
 
-## How it works
+For the simpler `src/` extension, see [How it works](#how-it-works-src) below and its own `npm install && npm run compile` workflow under [Development](#development).
+
+## How it works (`src/`)
 
 `src/extension.ts` is the entry point — the only file VS Code calls into directly. On startup (`activate()`) it sets up two subscriptions and hands the real work off to the other modules:
 
@@ -126,6 +127,10 @@ Two layers, both run in CI:
 - **Integration tests** (`integration/`) launch a real VS Code instance via `@vscode/test-electron` and drive the extension end to end: activation creates the global storage folder on a fresh profile, the real TypeScript language service reports the coached error as `source: "ts"` / `code: 2304`, hovering it surfaces the friendly hint, and the occurrence lands in the JSONL log.
 
 The integration suite needs to download VS Code, so it requires network access to `update.code.visualstudio.com`. In CI it runs under `xvfb`.
+
+## Security
+
+Code Coach is local-first by default — see [`SECURITY.md`](SECURITY.md) for what's sent off-device (nothing, unless you opt into an AI hint provider) and how to report a vulnerability.
 
 ---
 
