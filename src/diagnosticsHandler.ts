@@ -17,9 +17,9 @@ export interface ProcessDiagnosticsDeps {
 
 /**
  * Handles one batch of diagnostics for a single file: logs each one to the
- * console to confirm they're being received (issue #4), and for the one
- * coached error type, records the occurrence for mute tracking (issue #7)
- * and appends an event to the JSONL log via the logging helper (issue #16).
+ * console to confirm they're being received, and for the one coached error
+ * type, records the occurrence for mute tracking and appends an event to
+ * the JSONL log via the logging helper.
  *
  * Kept free of any 'vscode' API calls so it can be unit tested directly —
  * the extension's onDidChangeDiagnostics handler is a thin wrapper that

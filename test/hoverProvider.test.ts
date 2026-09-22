@@ -17,7 +17,7 @@ const otherDiagnostic: DiagnosticWithRange = {
   range: { start: { line: 9, character: 0 }, end: { line: 9, character: 1 } },
 };
 
-test('renders the friendly hint when the cursor is inside the target diagnostic range (issue #6)', () => {
+test('renders the friendly hint when the cursor is inside the target diagnostic range', () => {
   const message = buildHoverMessage([targetDiagnostic, otherDiagnostic], { line: 4, character: 3 }, () => false);
   assert.equal(message, FRIENDLY_HINT);
 });
@@ -32,7 +32,7 @@ test('returns undefined for a diagnostic that is not the coached error type', ()
   assert.equal(message, undefined);
 });
 
-test('falls back to raw diagnostics (undefined) once the error type is muted (issue #7)', () => {
+test('falls back to raw diagnostics (undefined) once the error type is muted', () => {
   const message = buildHoverMessage([targetDiagnostic], { line: 4, character: 3 }, () => true);
   assert.equal(message, undefined);
 });

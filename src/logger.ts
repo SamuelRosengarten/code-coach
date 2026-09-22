@@ -9,11 +9,11 @@ export function getLogFilePath(storageFolder: string): string {
 }
 
 /**
- * Builds one JSON object matching the ErrorEvent schema and appends it as a
- * single line to the log file (issue #14), creating the file on first write
- * if it doesn't exist yet (issue #15). Write failures (disk/permissions)
- * are caught so a logging problem never breaks the coaching experience
- * itself (issue #17) — they're reported to the console and swallowed.
+ * Turns one ErrorEvent into a line of JSON and appends it to the log file,
+ * creating the file on first write if it doesn't exist yet. Write failures
+ * (disk full, no permissions, etc.) are caught so a logging problem never
+ * breaks the coaching experience itself — they're reported to the console
+ * and swallowed rather than thrown.
  */
 export function appendErrorEvent(logFilePath: string, event: ErrorEvent): boolean {
   try {

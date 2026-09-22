@@ -20,7 +20,7 @@ function makeMemento(): MementoLike {
   };
 }
 
-test('logs every diagnostic to the console (issue #4) and only writes events to the log for the coached error type', () => {
+test('logs every diagnostic to the console and only writes events to the log for the coached error type', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'code-coach-handler-'));
   const logFilePath = getLogFilePath(dir);
   const muteTracker = new MuteTracker(makeMemento(), 10_000, 100);

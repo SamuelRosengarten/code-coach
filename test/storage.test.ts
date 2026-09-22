@@ -13,7 +13,7 @@ function makeTempParent(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'code-coach-storage-'));
 }
 
-test('ensureStorageFolder creates a missing folder (clean install, issue #25)', () => {
+test('ensureStorageFolder creates a missing folder (clean install)', () => {
   const parent = makeTempParent();
   const target = path.join(parent, 'globalStorage', 'code-coach');
   assert.equal(fs.existsSync(target), false);
@@ -45,7 +45,7 @@ test('getStorageFolder resolves from globalStorageUri and caches the result', ()
   assert.equal(fs.existsSync(target), true);
 
   // A second call with a *different* path should still return the cached
-  // value (issue #24: resolved once, reused after) instead of re-resolving.
+  // value (resolved once, reused after) instead of re-resolving.
   const otherContext = { globalStorageUri: { fsPath: path.join(parent, 'other') } };
   const second = getStorageFolder(otherContext);
   assert.equal(second, target);

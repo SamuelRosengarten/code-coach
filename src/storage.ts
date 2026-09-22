@@ -8,12 +8,15 @@ export interface StorageUriSource {
   globalStorageUri: { fsPath: string };
 }
 
+// Module-level variable, so it's shared by every call to getStorageFolder()
+// within this process (there's only ever one, per running extension).
+// This is the cache getStorageFolder() checks before doing any work.
 let cachedStorageFolder: string | undefined;
 
 /**
- * Checks whether the folder exists and creates it (recursively) if not
- * (issues #22, #23). Safe to call repeatedly — a no-op once the folder
- * is there.
+ * Checks whether the folder exists and creates it (recursively, i.e. any
+ * missing parent folders too) if not. Safe to call repeatedly — a no-op
+ * once the folder is there.
  */
 export function ensureStorageFolder(folderPath: string): string {
   if (!fs.existsSync(folderPath)) {
@@ -23,9 +26,9 @@ export function ensureStorageFolder(folderPath: string): string {
 }
 
 /**
- * Decision (issue #20): use globalStorageUri rather than the
- * workspace-scoped storageUri. The dashboard shows progress "over weeks,"
- * and a workspace-scoped log would reset every time a student opens a
+ * Decision: use globalStorageUri rather than the workspace-scoped
+ * storageUri. The dashboard shows progress "over weeks," and a
+ * workspace-scoped log would reset every time a student opens a
  * different project/repo, so history needs to persist across workspaces.
  */
 export function resolveStorageUri(context: StorageUriSource): { fsPath: string } {
@@ -33,10 +36,10 @@ export function resolveStorageUri(context: StorageUriSource): { fsPath: string }
 }
 
 /**
- * Resolves the on-disk folder Code Coach logs to: gets the storage URI
- * (#19), converts it to a filesystem path (#21), and ensures it exists
- * (#22, #23). The result is cached after the first call (#24) so it only
- * does this work once per activation instead of on every diagnostic.
+ * Resolves the on-disk folder Code Coach logs to: gets the storage URI,
+ * converts it to a filesystem path, and ensures it exists. The result is
+ * cached after the first call so this only does real work once per
+ * activation instead of on every diagnostic.
  */
 export function getStorageFolder(context: StorageUriSource): string {
   if (cachedStorageFolder) {
