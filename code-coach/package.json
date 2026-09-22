@@ -12,7 +12,7 @@
     "directory": "code-coach"
   },
   "engines": {
-    "vscode": "^1.138.0"
+    "vscode": "^1.85.0"
   },
   "categories": [
     "Education",
