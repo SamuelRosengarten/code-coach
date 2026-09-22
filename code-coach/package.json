@@ -71,7 +71,11 @@
       "properties": {
         "codeCoach.hintProvider": {
           "type": "string",
-          "enum": ["off", "claude", "local"],
+          "enum": [
+            "off",
+            "claude",
+            "local"
+          ],
           "enumDescriptions": [
             "Use only the built-in rule-based hints. No setup, no cost.",
             "Reword hints with the Claude API. Requires your own Anthropic API key (run \"Code Coach: Set Claude API Key\").",
@@ -99,7 +103,11 @@
         },
         "codeCoach.muteSuggestionWindowMinutes": {
           "type": "number",
-          "enum": [2, 5, 10],
+          "enum": [
+            2,
+            5,
+            10
+          ],
           "default": 5,
           "description": "The time window, in minutes, that codeCoach.muteSuggestionThreshold hits are counted within."
         }
@@ -126,7 +134,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "24.x",
-    "@types/vscode": "^1.138.0",
+    "@types/vscode": "^1.85.0",
     "@vscode/test-cli": "^0.0.15",
     "@vscode/test-electron": "^3.0.0",
     "eslint": "^10.5.0",
