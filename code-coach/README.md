@@ -14,7 +14,7 @@ It's built for learners — students, bootcamp grads, anyone picking up a new la
 
 ## AI-Powered Hints (optional)
 
-By default, Code Coach's hints come from a small built-in library of common mistakes (`src/hints.ts`) — free, instant, and fully offline. If you want more specific, natural-language explanations tailored to the *exact* error message you hit, you can opt into having that message reworded by an LLM.
+By default, Code Coach's hints come from a small built-in library of common mistakes (`src/hints/hints.ts`) — free, instant, and fully offline. If you want more specific, natural-language explanations tailored to the *exact* error message you hit, you can opt into having that message reworded by an LLM.
 
 This is controlled by the `codeCoach.hintProvider` setting:
 
@@ -72,6 +72,60 @@ That's it — no key, no command to run. If you'd rather use a different model o
 - A language extension that provides diagnostics for the language you're working in (e.g. the [Dart](https://marketplace.visualstudio.com/items?itemName=Dart-Code.dart-code) extension for Dart, built-in support for TypeScript/JavaScript/Python).
 - For `codeCoach.hintProvider: "claude"`: an Anthropic API key.
 - For `codeCoach.hintProvider: "local"`: [Ollama](https://ollama.com) installed and running, with your chosen model pulled.
+
+## How it works (for contributors)
+
+`src/extension.ts` is the entry point — the only file VS Code calls into directly. Everything else is organized into feature folders under `src/`:
+
+```
+VS Code raises a diagnostic (a compiler/linter error)
+            │
+            ▼
+ onDidChangeDiagnostics fires, debounced ~1.2s per file
+            │                              (src/diagnostics/diagnosticsListener.ts)
+            ▼
+ selectNewDiagnostics()      decides what's new/noise/deferred
+            │                (src/diagnostics/diagnosticsFilter.ts)
+            ▼
+ for each new mistake:
+   ├─ appendErrorEvent()     logs it to errors.jsonl         (src/storage/errorLogger.ts)
+   ├─ isMuted()?             skip the hint if muted           (src/storage/muteStore.ts)
+   └─ getCoachingHint()      picks the hint text:
+        ├─ "off"     → built-in rule library                  (src/hints/hints.ts)
+        ├─ "claude"  → reworded via the Claude API             (src/hints/claudeHintClient.ts)
+        └─ "local"   → reworded via a local Ollama model       (src/hints/localHintClient.ts)
+            (src/hints/rewordHint.ts orchestrates the above, with a timeout + fallback)
+            │
+            ▼
+ showHint()                  renders it as inline "ghost text" (src/diagnostics/hintDecorations.ts)
+            │
+            ▼
+ maybeSuggestMute()           offers to mute a hint that keeps recurring
+                              (src/storage/muteSuggestions.ts tracks whether already offered)
+
+ Separately, the sidebar "Stats" webview:
+            │
+            ▼
+ StatsViewProvider            reads errors.jsonl, computes day/week summaries,
+                               and posts them to the webview page as a message
+                              (src/dashboard/statsViewProvider.ts, src/dashboard/stats.ts)
+            │
+            ▼
+ media/dashboard.js            renders the charts client-side (plain JS, no Node access)
+```
+
+**Folder layout**
+
+| Folder | Responsibility |
+| --- | --- |
+| `src/extension.ts` | Entry point. Wires the folders below into VS Code's APIs; also owns the on-disk storage path everything else reads via `getStorageDir()`. |
+| `src/types.ts` | The shared `ErrorEvent` shape logged to and read from disk. |
+| `src/hints/` | "What should the hint say?" — the built-in rule library, its per-kind dashboard labels, and the two optional AI rewording backends (Claude API / local Ollama) with the orchestrator that picks between them. |
+| `src/diagnostics/` | "Notice a mistake and show it" — filtering which VS Code diagnostics are worth coaching on, the debounced listener that drives the whole pipeline, and the inline hint decorations. |
+| `src/storage/` | Everything persisted to disk: the mistake log, the mute list, and which mute suggestions have already been offered. |
+| `src/dashboard/` | The sidebar Stats panel: pure day/week aggregation math (`stats.ts`) plus the webview host that bridges it to `media/dashboard.js`. |
+
+Everything except `extension.ts` and the `dashboard`/`diagnostics` files that call `vscode.window`/`vscode.workspace` APIs is plain TypeScript — most of the trickiest logic (`diagnosticsFilter.ts`, `stats.ts`, `hints.ts`) has no `vscode` dependency at all, which is what lets it be unit tested directly (see `src/test/`) without a running editor.
 
 ## Known Issues
 

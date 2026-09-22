@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { initStorage } from '../extension';
-import { appendErrorEvent, countOccurrences, countOccurrencesWithinWindow, LOG_FILE_NAME } from '../errorLogger';
+import { appendErrorEvent, countOccurrences, countOccurrencesWithinWindow, LOG_FILE_NAME } from '../storage/errorLogger';
 import { ErrorEvent } from '../types';
 
 suite('Error Logger Test Suite', () => {

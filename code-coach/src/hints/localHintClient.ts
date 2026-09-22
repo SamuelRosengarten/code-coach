@@ -1,9 +1,20 @@
+// Optional AI hint provider #2: rewords the raw compiler/linter message
+// using a model running locally via Ollama — no account, no key, no
+// per-use cost. Only used when codeCoach.hintProvider is "local"; see
+// ../rewordHint.ts for how this is chosen over claudeHintClient.ts.
 import * as vscode from 'vscode';
 
+/** Shape of Ollama's /api/generate JSON response; only the field we use. */
 interface OllamaGenerateResponse {
 	response?: string;
 }
 
+/**
+ * Sends the raw error message to the configured Ollama endpoint and
+ * returns its reworded version. Throws on a network error or non-OK HTTP
+ * status — rewordHint.ts's withTimeout()/try-catch is what turns that into
+ * a silent fallback to the built-in hint.
+ */
 export async function rewordWithLocalModel(
 	rawMessage: string,
 	errorType: string,

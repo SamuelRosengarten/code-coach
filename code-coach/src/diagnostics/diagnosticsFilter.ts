@@ -1,5 +1,13 @@
+// Pure decision logic for "which of the diagnostics VS Code is currently
+// reporting should Code Coach actually log/hint on right now?" Kept free
+// of any side effects (no file I/O, no vscode.window calls) so it's easy
+// to unit test directly — see ../test/diagnosticsFilter.test.ts.
 import type * as vscode from 'vscode';
 
+// Error codes that fire constantly *while a line is mid-edit* (e.g. VS
+// Code reports "expected_token" for every keystroke until a statement is
+// syntactically complete). These are just editing noise, not a mistake to
+// coach on, so they're filtered out entirely rather than logged or hinted.
 export const SYNTAX_NOISE_CODES = new Set<string>([
 	'expected_token',
 	'missing_identifier',
@@ -13,6 +21,13 @@ export const SYNTAX_NOISE_CODES = new Set<string>([
 	'body_might_complete_normally',
 ]);
 
+/**
+ * Extracts a stable string identifier for a diagnostic's error code.
+ * `diagnostic.code` can be a plain string/number, an object like
+ * `{ value: 'undefined_identifier', target: ... }` (some language servers,
+ * e.g. Dart's, attach a docs link this way), or missing entirely — in
+ * which case the diagnostic's `source` (e.g. "eslint") is used instead.
+ */
 export function resolveErrorType(diagnostic: vscode.Diagnostic): string {
 	if (typeof diagnostic.code === 'object' && diagnostic.code !== null) {
 		return String(diagnostic.code.value);
@@ -23,14 +38,31 @@ export function resolveErrorType(diagnostic: vscode.Diagnostic): string {
 	return diagnostic.source ?? 'unknown';
 }
 
+/** One diagnostic that's a candidate to be logged/hinted, with its derived fields. */
 export interface DiagnosticSelection {
 	errorType: string;
 	line: number;
 	column: number;
+	/** `errorType:line:column` — see selectNewDiagnostics() for why this needs to include position. */
 	identity: string;
 	message: string;
 }
 
+/**
+ * Decides which of the diagnostics currently on a file are "new" and
+ * should be logged/hinted, given the set of identities already logged for
+ * that file from the previous pass.
+ *
+ * Each diagnostic's `identity` includes its line and column (not just its
+ * error type) so that fixing one mistake and then making the *same kind*
+ * of mistake again, elsewhere, is treated as a new occurrence rather than
+ * being silently ignored as "already logged".
+ *
+ * `shouldDefer` is an optional extra check (used by the caller to skip a
+ * diagnostic on the line the user is actively typing on) — a diagnostic
+ * that's deferred is left out of `toLog` *and* out of `updatedLogged`, so
+ * it gets reconsidered on the next pass once editing settles down.
+ */
 export function selectNewDiagnostics(
 	diagnostics: readonly vscode.Diagnostic[],
 	previouslyLogged: ReadonlySet<string>,

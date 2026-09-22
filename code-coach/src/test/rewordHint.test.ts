@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { getCoachingHint } from '../rewordHint';
-import { getHint } from '../hints';
+import { getCoachingHint } from '../hints/rewordHint';
+import { getHint } from '../hints/hints';
 
 function makeContext(): vscode.ExtensionContext {
 	const secrets = new Map<string, string>();

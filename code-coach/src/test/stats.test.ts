@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { computeStatsPayload, computeWeeklyTrend, formatLanguageLabel } from '../stats';
+import { computeStatsPayload, computeWeeklyTrend, formatLanguageLabel } from '../dashboard/stats';
 import { ErrorEvent } from '../types';
 
 function makeEvent(daysAgo: number, overrides: Partial<ErrorEvent> = {}): ErrorEvent {

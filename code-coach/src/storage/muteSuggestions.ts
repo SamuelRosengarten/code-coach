@@ -1,6 +1,11 @@
+// Remembers which (language, errorType) pairs Code Coach has already
+// *offered* to mute (see maybeSuggestMute() in ../diagnostics/diagnosticsListener.ts),
+// so the same "mute this?" prompt isn't repeated every time the threshold
+// is hit again — independent from muteStore.ts, which tracks what's
+// actually muted right now.
 import * as fs from 'fs';
 import * as path from 'path';
-import { getStorageDir } from './extension';
+import { getStorageDir } from '../extension';
 
 export const SUGGESTED_FILE_NAME = 'mute-suggested.json';
 

@@ -1,6 +1,10 @@
+// Persists which (language, errorType) pairs the user has muted, as a JSON
+// file — checked by diagnosticsListener.ts before showing a hint, and
+// managed via the "Code Coach: Manage Muted Hints" command / the
+// dashboard's mute buttons.
 import * as fs from 'fs';
 import * as path from 'path';
-import { getStorageDir } from './extension';
+import { getStorageDir } from '../extension';
 
 export const MUTE_FILE_NAME = 'muted.json';
 
@@ -13,6 +17,7 @@ function getMuteFilePath(): string {
 	return path.join(getStorageDir(), MUTE_FILE_NAME);
 }
 
+/** Type predicate: confirms `value` (e.g. something just parsed from JSON) actually has the MutedType shape. */
 function isMutedType(value: unknown): value is MutedType {
 	return (
 		typeof value === 'object' &&

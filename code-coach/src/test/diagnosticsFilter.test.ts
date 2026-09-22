@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import * as vscode from 'vscode';
-import { resolveErrorType, selectNewDiagnostics } from '../diagnosticsFilter';
+import { resolveErrorType, selectNewDiagnostics } from '../diagnostics/diagnosticsFilter';
 
 function makeDiagnostic(
 	line: number,

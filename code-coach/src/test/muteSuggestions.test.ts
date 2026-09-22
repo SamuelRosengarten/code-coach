@@ -4,7 +4,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { initStorage } from '../extension';
-import { hasBeenSuggested, markSuggested } from '../muteSuggestions';
+import { hasBeenSuggested, markSuggested } from '../storage/muteSuggestions';
 
 suite('Mute Suggestions Test Suite', () => {
 	let tempRoot: string;
