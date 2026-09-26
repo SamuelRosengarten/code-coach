@@ -8,4 +8,4 @@
 
 [[User Experience]] covers adjustable coaching intensity, notification frequency, and display options. [[Accessibility]] adds screen reader support, keyboard navigation, and high contrast modes, alongside [[Localization]] for a global student base.
 
-Part of the Code Coach To-Do List project.
+Part of the Code Coach To-Do List project. See the [[Code Coach UI.excalidraw|UI drawing]] for a mockup.
